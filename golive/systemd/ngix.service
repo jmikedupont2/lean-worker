@@ -1,0 +1,17 @@
+# systemd/ngix.service — go-live org, no access to user home
+[Unit]
+Description=go-live org ngix proxy (Cloudflare egress)
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /root/projects/twitterstorm/golive/services/proxy.py
+Environment=GOLIVE_PORT=9000
+Environment=GOLIVE_TARGET=https://solana.solfunmeme.com/golive
+NoNewPrivileges=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/golive
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

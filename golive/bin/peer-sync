@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# placeholder: Cloudflare <-> Cloudflare peer sync
+echo "peer-sync: cloudflare <-> cloudflare"

@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# placeholder: real data sync (logs/telemetry/errors) between
+# Cloudflare <-> systemd <-> peers lives in the deployment tier.
+echo "sync: cloudflare <-> systemd (logs/telemetry/errors)"
+echo "sync: cloudflare <-> cloudflare peers"
