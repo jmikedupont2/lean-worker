@@ -1,0 +1,23 @@
+{
+  "agent_id": "agent-b",
+  "wave": "XIII",
+  "title": "Wave XIII — gui2proof hardened gate (Aristotle round 2026-10-18 closure)",
+  "scope": "Apply Aristotle review main-01057110 (36 complaints): the emitted gate could be bypassed by omission, accepted an empty list, typed its counts, hid skipped checks and bound nothing. Wave XIII hardens the gate and keeps the review's bypasses as kernel-checked regressions.",
+  "topics": [
+    "Pin the expected check-id list by hand and prove omission fails (review items 1-2)",
+    "Derive checkCount/skippedCount from the lists, never literals (item 3)",
+    "Emit skipped live-deploy checks into the gate's view; no denominator trick (items 4-5)",
+    "Report a disabled live deploy as guardedNotExercised, never success (item 4 endgame)",
+    "Bind the artifact: evidence sha256 + commit fields (item 7)",
+    "Carry forward every still-open complaint: Round13 SLA decline, 1000ms threshold, empty-name a11y, 229/496/5365 counts, 16/16-merged claim"
+  ],
+  "estimated_theorems": 8,
+  "files_to_modify": [
+    "Gui2ProofHardened20261018.lean",
+    "ReviewGui2ProofGolive20261018.lean",
+    "docs/ARISTO_RESULTS_2026-10-18.md"
+  ],
+  "proof_principle": "Every proof proves what is already declared in the model. The review's bypass theorems are re-proved AGAINST the hardened gate and must fail there; if the gate ever regresses to the reviewed shape, this wave stops compiling.",
+  "compilation_command": "lean Gui2ProofHardened20261018.lean 2>&1",
+  "status": "applied 2026-10-18 — both modules compile clean on lean 4.28.0, 0 sorry"
+}

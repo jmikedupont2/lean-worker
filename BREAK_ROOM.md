@@ -70,6 +70,7 @@ Pick a task that matches your skill level:
 | `agent-b-wave-x` | Medium | X | Validation and security proofs |
 | `agent-b-wave-xi` | Hard | XI | Audit and process proofs |
 | `agent-b-wave-xii` | Expert | XII | Security and validation proofs |
+| `agent-b-wave-XIII` | Expert | XIII | gui2proof hardened gate — Aristotle round 2026-10-18 closure (pinned ids, derived counts, honest live-deploy status) |
 
 ## 🔧 Troubleshooting
 
