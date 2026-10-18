@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><title>golive/agent/golive-org — go-live</title>
+<style>
+body{font-family:monospace;white-space:pre-wrap;background:#0b0e14;color:#e6edf3;margin:0}
+h1{color:#7dd3fc}
+menu{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:6px}
+button{background:#1f2937;color:#e6edf3;border:1px solid #374151;padding:6px 8px;cursor:pointer}
+button:hover{background:#374151}
+button.active{background:#065f46;color:#bbf7d0;border-color:#15803d}
+pre{background:#0b0e14;border:1px solid #374151;padding:6px;overflow:auto}
+</style></head>
+<body>
+<h1>golive/agent/golive-org</h1>
+<menu>
+<button onclick="goto('/logs')">1 logs</button>
+<button onclick="goto('/commands')">2 commands</button>
+<button onclick="goto('/plan')">3 plan</button>
+<button onclick="goto('/deploy')">4 deploy</button>
+<button onclick="goto('/sync')">5 sync</button>
+<button onclick="goto('/status')">6 status</button>
+<button onclick="goto('/telemetry')">7 telemetry</button>
+<button onclick="goto('/errors')">8 errors</button>
+</menu>
+<pre id="out">ready — select a section above</pre>
+<script>
+function goto(h){fetch(h).then(r=>r.text()).then(t=>{document.getElementById('out').textContent=t})}
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+# go-live worktree
+worktrees/golive-org/
+config/
+logs/
+telemetry/
+deploy.log
+*.log

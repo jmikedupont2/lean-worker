@@ -1,0 +1,14 @@
+# Lakefile for Lean Worker
+
+name = "lean-worker"
+version = "0.1.0"
+srcDir = "src"
+defaultTargets = ["ClaudeTwin"]
+
+[[lean_exe]]
+name = "ClaudeTwin"
+root = "ClaudeTwin"
+
+[[lean_exe]]
+name = "GokujoGitLayer"
+root = "GokujoGitLayer"

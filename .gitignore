@@ -1,0 +1,50 @@
+# Build artifacts
+result
+result-*
+out/
+*.out
+
+# Nix store paths
+/nix/store/*
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*~
+
+# Python cache
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# LaTeX build
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+
+# Lean specific
+*.olean
+*.lean.json
+
+# Gokujo build artifacts
+minimal/.gokujo/build/
+
+# Temporary files
+.tmp
+*.tmp
+temp/
+tmp/
+
+# Explore worktrees backup
+explore/*/.git.bak
+
+# Lean project build outputs
+.minimal/
+.minimal-*/
+lake-packages/
+.build/

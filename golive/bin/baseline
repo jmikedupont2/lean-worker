@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# placeholder: unauthenticated public API baseline dump
+echo "baseline recorded: public user + timeline endpoints"
