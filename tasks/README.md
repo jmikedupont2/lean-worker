@@ -8,7 +8,8 @@ This directory contains task documentation for the lean-worker repository.
 
 | Branch | Commit | Status |
 |--------|--------|--------|
-| `main` | `434c4da` | Main development |
+| `main` | `08a35ab` | Main development |
+| `integration/vaciu-merge` | `ee86fa3` | Vaciu PRs + Aleph Cloud removal merged |
 | `feature/all-worker-bindings` | `8f7c17d` | Current working branch |
 | `agent/bone-proof-loop-close` | `501ffa1` | Frontend component conversion |
 | `agent/buffy-p2p-knowledge-20261001` | `3133d10` | Buffy twin formalization |
@@ -31,9 +32,9 @@ This directory contains task documentation for the lean-worker repository.
 - [x] Rebuilt fixed native binary (`minimal/gokujo`, iterative `walkLean` + `scanStrTR`)
 - [x] VerifiedRunner proof theorem fixes (`minimal/lean_worker_caller_combined.lean`)
 - [x] Command equivalence verification (13 verifiedCaller theorems + registry theorems)
-- [ ] CI/CD integration (`.github/workflows/lean.yml` fix-verification step)
-- [ ] Full-project testing (Solfunmeme-scale scan with rebuilt binary)
-- [ ] Documentation updates (README, N00B_GUIDE, BREAK_ROOM)
+- [x] CI/CD integration (`.github/workflows/lean.yml` fix-verification step merged to `integration/vaciu-merge`)
+- [x] Full-project testing (Solfunmeme-scale scan with rebuilt binary)
+- [x] Documentation updates (README, N00B_GUIDE, BREAK_ROOM)
 
 ### Related Tasks
 
