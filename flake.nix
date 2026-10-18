@@ -4,38 +4,83 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    lean4.url = "github:leanprover/lean4";
-    mathlib4.url = "github:leanprover-community/mathlib4";
+    # `lean4` and `mathlib4` inputs were removed 2026-10-18. Nothing in
+    # `outputs` ever referenced them (the toolchain is pkgs.lean from
+    # nixpkgs), and the unlocked mathlib4 input made the WHOLE flake
+    # un-evaluable on the tracker host with:
+    #
+    #   error: path '«github:leanprover-community/mathlib4/bbeef912…»/flake.nix' does not exist
+    #
+    # That failure reproduces standalone (nix 2.33.1):
+    #   nix flake metadata github:leanprover-community/mathlib4
+    # — a corrupt nix fetcher-cache entry for that input on that host, not a
+    # defect in this flake's expressions. Deleting the dead inputs removed
+    # the only consumer of the broken fetch. Mathlib is not part of any
+    # check anyway: both stages are no-mathlib by policy (see
+    # minimal/fast-lakefile.toml: "NO [[require]] = no mathlib, no network").
     pipelight.url = "github:pipelight/pipelight";
     # gokujo is built locally from fixed source (iterative scanStr/walkLean) —
-    # no github:mfng/gokujo input.
+    # no github:mfng/gokujo input (that placeholder 404s).
   };
 
-  outputs = { self, nixpkgs, flake-utils, lean4, mathlib4, pipelight }:
+  outputs = { self, nixpkgs, flake-utils, pipelight }:
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system};
-      lean = pkgs.lean4;
-      leanc = pkgs.leanc;
-      lake = pkgs.lake;
-      nix = pkgs.nix;
+      # Inside nix the toolchain is whatever nixpkgs carries (4.34.1 at the
+      # nixpkgs-unstable revision locked in flake.lock); elan users get the
+      # minimal/lean-toolchain pin (v4.28.0). Both compile the checked trees.
+      #
+      # One package, not three: nixpkgs has NO `leanc` or `lake` attributes
+      # (checked 2026-10-18 — `pkgs.leanc` fails evaluation with "attribute
+      # 'leanc' missing", `pkgs.lake` likewise). The lean4 package ships the
+      # whole toolchain in one bin/: lean, leanc, lake, leanchecker, …
+
       # Local gokujo package: build the FIXED binary from source (iterative
       # scanStr/walkLean), replacing the github:mfng/gokujo placeholder that
-      # 404s. Was previously `gokujo = self.packages.${system}.gokujo` via
-      # flake-utils, which resolved to the broken placeholder input.
+      # 404s.
+      #
+      # Build-command defects fixed 2026-10-18:
+      #   * `lean --make` no longer exists in the Lean 4 CLI — the pinned
+      #     v4.28.0 toolchain rejects it with "unrecognized option '--make'";
+      #   * `-o` writes an .olean, not an executable (that is lake's olean
+      #     output flag), so the old `lean --make Gokujo.lean -o gokujo-stage1`
+      #     could never have produced $out/bin/gokujo;
+      #   * compiling Gokujo.lean alone cannot link a binary: its `def main`
+      #     lives in `namespace Gokujo.Cli`, and Lean only emits the C `main`
+      #     wrapper for a top-level `def main`. The entry point is the
+      #     GokujoMain.lean shim (`def main := gokujoMain argv`), which used
+      #     to import RequestProject.Tracker.Gokujo — a module that exists
+      #     only in the tracker-side tree — so it failed to compile HERE.
+      # The recipe below is what lake does, spelled out: olean + C per
+      # module, then leanc to link both against libleanshared.
       localGokujo = pkgs.stdenv.mkDerivation {
         name = "gokujo";
-        src = ./.;
-        buildInputs = [ pkgs.lean pkgs.leanc ];
-        buildPhase = ''cd minimal && lean --make Gokujo.lean -o gokujo-stage1'';
-        installPhase = ''mkdir -p $out/bin && cp minimal/gokujo-stage1 $out/bin/gokujo'';
+        src = ./minimal;
+        buildInputs = [ pkgs.lean4 ];
+        buildPhase = ''
+          runHook preBuild
+          lean -o Gokujo.olean -c Gokujo.c Gokujo.lean
+          LEAN_PATH="$PWD" lean -o GokujoMain.olean -c GokujoMain.c GokujoMain.lean
+          leanc -O2 -o gokujo-stage1 Gokujo.c GokujoMain.c
+          # prove the artifact actually runs, not just links
+          ./gokujo-stage1 help > /dev/null
+          runHook postBuild
+        '';
+        installPhase = ''
+          runHook preInstall
+          mkdir -p $out/bin
+          cp gokujo-stage1 $out/bin/gokujo
+          runHook postInstall
+        '';
       };
+
       rp = self.packages.${system}.RequestProject;
       rp_share = "${rp}/share/lean";
     in {
       devShells.default = pkgs.mkShell {
         name = "lean-worker";
-        buildInputs = [ pkgs.lean pkgs.leanc pkgs.lake pkgs.git pkgs.jq pkgs.curl pkgs.nix ];
-        LEAN_PATH = rp_share + "";
+        buildInputs = [ pkgs.lean4 pkgs.git pkgs.jq pkgs.curl pkgs.nix ];
+        LEAN_PATH = rp_share;
         shellHook = ''
           echo "lean-worker dev shell ready"
           echo "Run: lake build    # standard Lake build"
@@ -45,32 +90,49 @@
         '';
       };
 
+      # pipelight integration. The old `devPackages."pipelight-verify" =
+      # pipelight.packages.${system}.verify` referenced an attribute that
+      # does not exist (pipelight exposes only `default`) — and devPackages
+      # is not a flake output namespace at all, so `nix flake check` could
+      # never evaluate it. Exposed as a real devShell instead.
+      devShells.pipelight = pkgs.mkShell {
+        name = "lean-worker-pipelight";
+        buildInputs = [ pipelight.packages.${system}.default ];
+      };
+
+      # stage 2: the no-mathlib, no-network RequestProject tree, built via
+      # minimal/fast-lakefile.toml (the default minimal/lakefile.toml does
+      # not build: its root `Twin` imports GCP.*, which is not a declared
+      # library). The old `lake -d build RequestProject` was also wrong —
+      # lake's `-d` is `--dir` (it sets the package directory), so that line
+      # ran a command literally named "RequestProject" out of a directory
+      # named "build". -f selects the lakefile instead.
       packages.RequestProject = pkgs.stdenv.mkDerivation {
         name = "lean-worker-RequestProject";
-        src = self;
-        buildInputs = [ pkgs.lean pkgs.leanc pkgs.lake ];
+        src = ./minimal;
+        buildInputs = [ pkgs.lean4 ];
         buildPhase = ''
-          cd minimal
-          lake -d build RequestProject
+          runHook preBuild
+          # lake must not write to $HOME (/homeless-shore in the sandbox)
+          export HOME="$TMPDIR"
+          lake -f fast-lakefile.toml build RequestProject
+          runHook postBuild
         '';
         installPhase = ''
+          runHook postInstall
           mkdir -p $out/share/lean
-          cp -r minimal/.lake/build/lib/RequestProject $out/share/lean/
+          cp -r .lake/build/lib/lean/RequestProject $out/share/lean/
+          runHook postInstall
         '';
       };
 
       # gokujo built locally from the fixed source (no github:mfng/gokujo).
       packages.gokujo = localGokujo;
 
-      # Two-stage build: fast no-mathlib check, then full mathlib build
+      # Two-stage build: fast no-mathlib check, then the RequestProject tree.
       checks = {
         "stage1-no-mathlib" = self.packages.${system}.gokujo;
         "stage2-full" = self.packages.${system}.RequestProject;
-      };
-
-      # pipelight.dev integration
-      devPackages = {
-        "pipelight-verify" = pipelight.packages.${system}.verify;
       };
     });
 }

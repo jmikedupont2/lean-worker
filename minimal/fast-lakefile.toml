@@ -4,10 +4,20 @@ defaultTargets = ["RequestProject"]
 
 # NO [[require]] = no mathlib, no network, fast for CI
 
+# Roots are dotted MODULE NAMES resolved from the package srcDir:
+# RequestProject/Twin.lean is the module `RequestProject.Twin`. A bare
+# `dir = "RequestProject"` + bare-root spelling does NOT scope roots (lake
+# resolves bare `Twin` to the top-level minimal/Twin.lean instead).
+#
+# Main and ProxyReport are deliberately NOT roots here:
+#   * Main imports Mathlib and RequestProject.{Protocol,Proxy}.* — neither
+#     exists in this tree (no-mathlib policy; Proxy/Protocol live only at
+#     the top level as Proxy/ and Protocol/);
+#   * ProxyReport imports RequestProject.Proxy.Export, also absent.
+# They rejoin once those subtrees exist.
 [[lean_lib]]
 name = "RequestProject"
-dir = "RequestProject"
-roots = ["Agent", "APICapabilities", "CommandExecution", "CreditUsage", "ExecutionTrace", "ToolProvenance", "Twin", "Main", "ProxyReport"]
+roots = ["RequestProject.Agent", "RequestProject.APICapabilities", "RequestProject.CommandExecution", "RequestProject.CreditUsage", "RequestProject.ExecutionTrace", "RequestProject.ToolProvenance", "RequestProject.Twin"]
 
 [[lean_lib]]
 name = "RequestProject.Proxy"
@@ -39,25 +49,25 @@ name = "proxy_report"
 root = "ProxyReport"
 
 # Add gokujo to the project
-depends = ["Gokujo"]
 
+# lake roots are module names, never file paths — no `.lean` suffix.
 [[lean_lib]]
 name = "Gokujo"
-roots = ["Gokujo.lean", "GokujoMain.lean"]
+roots = ["Gokujo", "GokujoMain"]
 
 # Add execution scripts for agent-c and testing
-depends = ["ExecScript"]
+# lake roots are dotted MODULE NAMES, not file paths: AgentC/main.lean → AgentC.main
 
 [[lean_exe]]
 name = "agent-c"
-root = "AgentC/main"
+root = "AgentC.main"
 
 # Add test suite scripts
-depends = ["TestSuite"]
+# tests/run/main.lean → tests.run.main (dotted module name, not a path)
 
 [[lean_exe]]
 name = "test-suite"
-root = "tests/run"
+root = "tests.run.main"
 
 # Cache configuration for fast builds
 cache = { enabled = true, directory = ".lake/cache" }
@@ -69,7 +79,5 @@ cache = { enabled = true, directory = ".lake/cache" }
 # No [[require]] = no mathlib
 
 # Fast build settings (subset of optimizations)
-options = {
-  transparency = true
-  logging = false
-}
+# TOML inline tables must be one line — a multi-line one is a syntax error.
+options = { transparency = true, logging = false }
