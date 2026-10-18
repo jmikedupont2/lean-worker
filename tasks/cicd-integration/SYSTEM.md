@@ -13,7 +13,10 @@ The lean-worker project has GitHub Actions workflows that need to verify the gok
 ## Steps
 1. [x] Document the CI fix-verification step (workflow not yet committed)
 2. [x] Add test steps for stack-overflow fix in CI template (scan RequestProject, check theorems)
-3. [x] Verify `flake.nix` uses local source (done); CI pipeline not runnable in this environment
+3. [x] Verify `flake.nix` uses local source — the `github:mfng/gokujo` placeholder
+     input (404s) was replaced with a local `localGokujo` derivation that builds
+     the fixed binary from source (flake.nix line ~25).
+4. [x] CI pipeline not runnable in this environment
 
 ## Commands
 ```bash
@@ -33,7 +36,14 @@ LEAN_PATH=. lean --run GokujoMain.lean scan RequestProject
 - Ability to modify repository CI configuration
 
 ## Notes
-- Branch: main (`434c4da`)
+- Branch: main (`c1dc851`)
 - CI workflow already contains fix-verification step; needs commit to `feature/gokujo-updates` for CI to exercise it
 - Shared Nix cache can speed up CI builds (SHARED_LAKE_CACHE.md)
 - Consider adding matrix testing for different OS/platforms
+
+## flake.nix fix (2026-10-17)
+- Replaced `github:mfng/gokujo` placeholder input with `localGokujo` derivation
+  that builds the fixed binary from source.
+- Removed `with pkgs` (Nix parser quirk); used `pkgs.lean`/`pkgs.leanc` prefix.
+- `nix-instantiate --parse` passes; `nix flake check` reaches input resolution
+  but fails on a pre-existing stale `mathlib4` lock entry (unrelated to this change).
