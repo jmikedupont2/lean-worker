@@ -13,8 +13,24 @@ the gui2proof guard evidence (`gui2proof-golive.json`, 16/16) and the emitted
   own machine-checked counter-theorems vendored verbatim as
   `ReviewGui2ProofGolive20261018.lean` (compiles clean, no `sorry`, axioms at
   most `propext`).
-- **twitterstorm `cafdd57e`** — IN_PROGRESS at read time; its complaints will
-  be ingested when it completes (tracker deck panel fetches them).
+- **twitterstorm `cafdd57e`** — COMPLETE (ingested same day): **20
+  complaints**, worst first: (1–2) a stale guard artifact survives an aborted
+  run — the old `.lean` is never deleted first, so a crash leaves a stale
+  `launch_dialog_safe` (and, after one opt-in run, a stale
+  `launch_dialog_deploy_verified`) still compiling on disk; (3) token-absence
+  checks reduce to a regex when no token is loaded; (4) `confirm` is a
+  client-supplied JSON field — no Origin/Host/Content-Type check, so a
+  cross-site POST can deploy or delete; (5) `/api/nodes/bootstrap` mutates
+  the live account with no confirm; (12) **the compile gate accepts `sorry`**
+  (`lean` exits 0 — no `#print axioms` step runs); (8) the negative probes
+  would be DESTRUCTIVE if the guard under test had regressed (real-credential
+  deploy probe); (19) unescaped values in the wrangler config and bootstrap
+  `sh -c`; (20) opt-in mode accepts a 401-everything worker and never deletes
+  it. Its Lean module `Gui2ProofGoliveReview.lean` proves the 16 ids/counts/
+  skips facts for the artifact, and marks `allProven`-as-definition
+  **addressed** there. Note (12) applies to ANY gui2proof pipeline including
+  ours: a compile-only gate is not a no-sorry gate — both modules in this
+  wave were therefore grepped for `sorry` AND compiled.
 - Previous runs' complaints (main `142d703c` Round 13, twitterstorm
   `d71fd135` provenance round) are vendored as
   `docs/ARISTO_REVIEW_ROUND13_LETTER_20260916.md` and summarised in section
