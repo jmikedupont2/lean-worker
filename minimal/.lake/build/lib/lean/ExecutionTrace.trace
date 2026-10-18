@@ -1,0 +1,28 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["380b2e9f6c3b60e1.olean"],
+  "i": "eac18401b1ebade9.ilean",
+  "c": "9048bcae78fe0d73.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean /home/mdupont/.elan/toolchains/leanprover--lean4---v4.28.0/bin/lean /home/mdupont/projects/lean-worker-new-integration/minimal/ExecutionTrace.lean -o /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean/ExecutionTrace.olean -i /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean/ExecutionTrace.ilean -c /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/ir/ExecutionTrace.c --setup /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/ir/ExecutionTrace.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["ExecutionTrace:deps",
+   [["deps",
+     [["RequestProject/RequestProject:extraDep",
+       [["@RequestProject:extraDep", "00000000000006bb"]]],
+      ["imports", "00000000000006bb"]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.28.0, commit 7e01a1bf5c70fc6167d49c345d3bf80596e9a79b",
+   "a96bc04a2e5e9630"],
+  ["/home/mdupont/projects/lean-worker-new-integration/minimal/ExecutionTrace.lean",
+   "fb26f22ef2cbbdd6"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "d9717110fdbcf0ff"}

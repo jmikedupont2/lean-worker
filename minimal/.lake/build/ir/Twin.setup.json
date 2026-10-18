@@ -1,0 +1,9 @@
+{"plugins": [],
+ "package": "RequestProject",
+ "options": {},
+ "name": "Twin",
+ "isModule": false,
+ "importArts":
+ {"CreditUsage":
+  ["/home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean/CreditUsage.olean"]},
+ "dynlibs": []}

@@ -1,0 +1,28 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["1e72e0cc8ab1ddda.olean"],
+  "i": "d206a5c09d1319eb.ilean",
+  "c": "2c1a346fa8714f9f.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean /home/mdupont/.elan/toolchains/leanprover--lean4---v4.28.0/bin/lean /home/mdupont/projects/lean-worker-new-integration/minimal/CreditUsage.lean -o /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean/CreditUsage.olean -i /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean/CreditUsage.ilean -c /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/ir/CreditUsage.c --setup /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/ir/CreditUsage.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["CreditUsage:deps",
+   [["deps",
+     [["RequestProject/RequestProject:extraDep",
+       [["@RequestProject:extraDep", "00000000000006bb"]]],
+      ["imports", "00000000000006bb"]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.28.0, commit 7e01a1bf5c70fc6167d49c345d3bf80596e9a79b",
+   "a96bc04a2e5e9630"],
+  ["/home/mdupont/projects/lean-worker-new-integration/minimal/CreditUsage.lean",
+   "3ad8f609f39d9717"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "c67a1e775347bfc2"}

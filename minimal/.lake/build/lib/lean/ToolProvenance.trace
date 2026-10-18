@@ -1,0 +1,28 @@
+{"synthetic": false,
+ "schemaVersion": "2025-09-10",
+ "outputs":
+ {"o": ["31eafcc41852046d.olean"],
+  "i": "fb6a720e596a7abb.ilean",
+  "c": "59f1ea41c1f3f38c.c"},
+ "log":
+ [{"message":
+   ".> LEAN_PATH=/home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean /home/mdupont/.elan/toolchains/leanprover--lean4---v4.28.0/bin/lean /home/mdupont/projects/lean-worker-new-integration/minimal/ToolProvenance.lean -o /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean/ToolProvenance.olean -i /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/lib/lean/ToolProvenance.ilean -c /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/ir/ToolProvenance.c --setup /home/mdupont/projects/lean-worker-new-integration/minimal/.lake/build/ir/ToolProvenance.setup.json --json",
+   "level": "trace"}],
+ "inputs":
+ [["ToolProvenance:deps",
+   [["deps",
+     [["RequestProject/RequestProject:extraDep",
+       [["@RequestProject:extraDep", "00000000000006bb"]]],
+      ["imports", "00000000000006bb"]]],
+    ["libs",
+     [["import dynlibs", "00000000000006bb"],
+      ["package external libraries", "00000000000006bb"],
+      ["module dynlibs", "00000000000006bb"],
+      ["module plugins", "00000000000006bb"]]]]],
+  ["Lean 4.28.0, commit 7e01a1bf5c70fc6167d49c345d3bf80596e9a79b",
+   "a96bc04a2e5e9630"],
+  ["/home/mdupont/projects/lean-worker-new-integration/minimal/ToolProvenance.lean",
+   "d6cfbb47b3a12a52"],
+  ["options", "00000000000006bb"],
+  ["Module.leanArgs: #[]", "00000000000006bb"]],
+ "depHash": "032adc6868cef80b"}
