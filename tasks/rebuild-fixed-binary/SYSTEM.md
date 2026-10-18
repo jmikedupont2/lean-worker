@@ -42,11 +42,15 @@ nix build .#gokujo          # the flake lane that now works
   failed`, `no sorry, no admit, no native_decide (284 declarations in 7 files)`,
   axioms audited (89 declarations; observed only propext, Quot.sound,
   Classical.choice).
-- Full-dir `check RequestProject` fails on exactly 3 modules, all source-level
-  gaps, not toolchain problems: `Main` (imports `Mathlib` under the
-  no-mathlib policy), `ProxyReport` (imports `RequestProject.Proxy.Export`,
-  subtree absent), `PluginContexts.AllModules` (imports 48
+- Full-dir `check RequestProject` failed then on exactly 3 modules, all source-level gaps:
+  `Main` (imports `Mathlib` under the no-mathlib policy), `ProxyReport` (imports
+  `RequestProject.Proxy.Export`, subtree absent), `PluginContexts.AllModules` (imports 48
   `RequestProject.PluginContexts.*` modules that exist only at top level).
+  **Closed 2026-10-18** on branch `agent/fix-requestproject-check` — full-dir check is now an
+  unqualified PASS (73 files, 992 declarations, clean rebuild): Protocol/Proxy subtrees applied
+  from aristo run 58ae717d, Mathlib import dropped from Main, the 36 plugin contexts materialized
+  and repaired under `RequestProject/PluginContexts/`. Receipts in
+  `tasks/fix-requestproject-full-check/SYSTEM.md`.
 - Large corpora, old vs rebuilt binary (identical results both sides, no
   overflow by either): tracker `lean/` 398 files scanned / 12,769 declarations
   — rebuilt 0.94 s real / 1.95 s user vs pre-fix 3.11 s real / 6.27 s user

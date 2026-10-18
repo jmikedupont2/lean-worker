@@ -9,40 +9,43 @@ defaultTargets = ["RequestProject"]
 # `dir = "RequestProject"` + bare-root spelling does NOT scope roots (lake
 # resolves bare `Twin` to the top-level minimal/Twin.lean instead).
 #
-# Main and ProxyReport are deliberately NOT roots here:
-#   * Main imports Mathlib and RequestProject.{Protocol,Proxy}.* — neither
-#     exists in this tree (no-mathlib policy; Proxy/Protocol live only at
-#     the top level as Proxy/ and Protocol/);
-#   * ProxyReport imports RequestProject.Proxy.Export, also absent.
-# They rejoin once those subtrees exist.
+# Main, ProxyReport and the Protocol/Proxy subtrees rejoined 2026-10-18:
+# the RequestProject/{Protocol,Proxy} trees were applied from aristo run
+# 58ae717d (self-export 2026-09-19) and Main no longer imports Mathlib
+# (no-mathlib policy; the Mathlib-only scoped opens went with it). The
+# Decouple/TrustCapsule modules come from aristo run 749a6eb8 (2026-10-18) —
+# only its no-mathlib, import-closed subset: Mobius/Fitting/Ontology
+# (`public import Mathlib`) and Nesting/Tolerance/Introspection/SelfApply/
+# Experiments (imports of modules absent from the run export) were left out.
 [[lean_lib]]
 name = "RequestProject"
-roots = ["RequestProject.Agent", "RequestProject.APICapabilities", "RequestProject.CommandExecution", "RequestProject.CreditUsage", "RequestProject.ExecutionTrace", "RequestProject.ToolProvenance", "RequestProject.Twin"]
+roots = [
+  "RequestProject.Agent", "RequestProject.APICapabilities", "RequestProject.CommandExecution",
+  "RequestProject.CreditUsage", "RequestProject.ExecutionTrace", "RequestProject.ToolProvenance",
+  "RequestProject.Twin", "RequestProject.Main", "RequestProject.ProxyReport",
+  "RequestProject.Analyzer", "RequestProject.Classify", "RequestProject.Chunks",
+  "RequestProject.Reflect", "RequestProject.ReflectGraph", "RequestProject.Demo",
+  "RequestProject.Synonyms", "RequestProject.ModuleDeps", "RequestProject.Schema",
+  "RequestProject.Fingerprint", "RequestProject.TrustPolynomial", "RequestProject.TrustPolynomialSpec",
+  "RequestProject.TrustCapsule", "RequestProject.TrustCapsuleMeasured"
+]
 
 [[lean_lib]]
 name = "RequestProject.Proxy"
-roots = ["Concrete", "Core", "Dashboard", "Example", "Export", "Interop", "Monitor"]
+roots = ["RequestProject.Proxy.Concrete", "RequestProject.Proxy.Core", "RequestProject.Proxy.Dashboard", "RequestProject.Proxy.Example", "RequestProject.Proxy.Export", "RequestProject.Proxy.Interop", "RequestProject.Proxy.Monitor"]
 
 [[lean_lib]]
 name = "RequestProject.Protocol"
-roots = ["Client", "Core", "Example", "Server", "Soundness"]
+roots = ["RequestProject.Protocol.Client", "RequestProject.Protocol.Core", "RequestProject.Protocol.Example", "RequestProject.Protocol.Server", "RequestProject.Protocol.Soundness"]
 
+# One root pulls in all 36 per-plugin context modules. (The previous bare-root
+# list resolved to top-level minimal/*.lean, which never compiled — Mathlib
+# tactics without Mathlib; the compiling copies now live in
+# RequestProject/PluginContexts/, one sub-namespace per module.)
 [[lean_lib]]
 name = "RequestProject.PluginContexts"
 deps = ["RequestProject"]
-roots = [
-  "activity_profile", "aristotle_manager", "aristotle_tools", "cid_index_lean",
-  "dir_to_shmem", "eco_research", "emacs_search", "erdfa_publish", "forgecode",
-  "forgecode_extras", "forge_plugin_tantivy", "git_tools", "harbor", "hive_driver",
-  "index_to_shmem", "ipld_car_shmem_client", "ipld_car_shmem_server",
-  "lean4_block_server", "lean4_cbor_bridge", "lean4_repl", "lean4_twin",
-  "letta_ipld_memory", "monster_hecke", "monster_voa", "observer_qa",
-  "omnisearch", "omnisearch_config", "parquet_index", "proof_robot",
-  "repo_headers", "shard_tools", "shmem_dedup", "shmem_optimize", "shmem_warm",
-  "spec_to_proof", "spool", "spool_source", "tantivy_indexer", "task_manager",
-  "test_tag_42", "tokenizer", "zombie_driver", "zos_a11y_gui", "zos_github_manager",
-  "zos_noc_manager", "zos_plugin_generators"
-]
+roots = ["RequestProject.PluginContexts.AllModules"]
 
 [[lean_exe]]
 name = "proxy_report"
