@@ -1,0 +1,57 @@
+-- RequestProject/PluginContexts/AllModules.lean
+-- Module import list for the RequestProject.PluginContexts library.
+--
+-- Each .lean file in this directory defines one Gokujo onboarding tool
+-- plugin context under namespace RequestProject.PluginContexts.
+-- The registry (lean_worker_registry.lean / contexts/registry/registry.json)
+-- references these module names as interface_module so the per-tool
+-- interface shape can be resolved without reflection.
+
+import RequestProject.PluginContexts.dir_to_shmem
+import RequestProject.PluginContexts.task_manager
+import RequestProject.PluginContexts.parquet_index
+import RequestProject.PluginContexts.forgecode
+import RequestProject.PluginContexts.zos_github_manager
+import RequestProject.PluginContexts.forgecode_extras
+import RequestProject.PluginContexts.ipld_car_shmem_server
+import RequestProject.PluginContexts.shmem_warm
+import RequestProject.PluginContexts.index_to_shmem
+import RequestProject.PluginContexts.ipld_car_shmem_client
+import RequestProject.PluginContexts.shmem_dedup
+import RequestProject.PluginContexts.zos_plugin_generators
+import RequestProject.PluginContexts.proof_robot
+import RequestProject.PluginContexts.tokenizer
+import RequestProject.PluginContexts.monster_hecke
+import RequestProject.PluginContexts.eco_research
+import RequestProject.PluginContexts.emacs_search
+import RequestProject.PluginContexts.letta_ipld_memory
+import RequestProject.PluginContexts.zos_noc_manager
+import RequestProject.PluginContexts.activity_profile
+import RequestProject.PluginContexts.aristotle_manager
+import RequestProject.PluginContexts.tantivy_indexer
+import RequestProject.PluginContexts.lean4_twin
+import RequestProject.PluginContexts.harbor
+import RequestProject.PluginContexts.zos_a11y_gui
+import RequestProject.PluginContexts.git_tools
+import RequestProject.PluginContexts.spec_to_proof
+import RequestProject.PluginContexts.omnisearch
+import RequestProject.PluginContexts.omnisearch_config
+import RequestProject.PluginContexts.parquet_index
+import RequestProject.PluginContexts.proof_robot
+import RequestProject.PluginContexts.repo_headers
+import RequestProject.PluginContexts.shard_tools
+import RequestProject.PluginContexts.shmem_dedup
+import RequestProject.PluginContexts.shmem_optimize
+import RequestProject.PluginContexts.shmem_warm
+import RequestProject.PluginContexts.spec_to_proof
+import RequestProject.PluginContexts.spool
+import RequestProject.PluginContexts.spool_source
+import RequestProject.PluginContexts.tantivy_indexer
+import RequestProject.PluginContexts.task_manager
+import RequestProject.PluginContexts.test_tag_42
+import RequestProject.PluginContexts.tokenizer
+import RequestProject.PluginContexts.zombie_driver
+import RequestProject.PluginContexts.zos_a11y_gui
+import RequestProject.PluginContexts.zos_github_manager
+import RequestProject.PluginContexts.zos_noc_manager
+import RequestProject.PluginContexts.zos_plugin_generators

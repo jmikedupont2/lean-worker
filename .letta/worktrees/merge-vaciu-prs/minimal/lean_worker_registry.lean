@@ -334,7 +334,7 @@ theorem registry_has_entries :
 
 -- Theorem 2: The agent knows all repos are registered
 theorem all_repos_registered :
-  registryInterface.total_entries = 10 := by
+  registryInterface.total_entries = 28 := by
   unfold registryInterface
   rfl
 
