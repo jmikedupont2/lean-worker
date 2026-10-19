@@ -4,134 +4,162 @@
   <meta charset="utf-8">
   <title>OTC Proof Trading Desk</title>
   <style>
-    body {font-family: system-ui, sans-serif; margin: 2rem; background: #0a0a0a; color: #c0c0c0;}
-    .board {margin: 1rem 0;}
-    .ticket {background: #1a1a1a; padding: 1rem; margin: 1rem 0; border-radius: 4px;}
-    .escrow {background: #1a1a1a; padding: 1rem; margin: 1rem 0; border-radius: 4px;}
-    .health {background: #1a1a1a; padding: 1rem; margin: 1rem 0; border-radius: 4px;}
-    .kb {background: #1a1a1a; padding: 1rem; margin: 1rem 0; border-radius: 4px;}
-    button {background: #2a2a2a; color: #c0c0c0; border: 1px solid #505050; padding: 0.5rem 1rem; cursor: pointer;}
+    body {font-family: system-ui, sans-serif; margin: 1rem; background: #0a0a0a; color: #c0c0c0;}
+    h1 {color: #7dd3fc;}
+    .tabs {display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px;}
+    button {background: #1f2937; color: #e6edf3; border: 1px solid #505050; padding: 0.5rem 0.75rem; cursor: pointer;}
+    button:hover {background: #374151;}
+    button.active {background: #065f46; color: #bbf7d0; border-color: #15803d;}
+    .card {background: #1a1a1a; border: 1px solid #505050; border-radius: 6px; padding: 1rem; margin-top: 1rem;}
+    .grid {display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px;}
+    .kv {display: flex; gap: 12px; padding: 6px 0; border-bottom: 1px solid #27272a;}
+    .kv .k {color: #94a3b8; font-size: 0.85rem; flex: 0 0 80px;}
+    .kv .v {color: #e6edf3; font-family: monospace; font-size: 0.95rem;}
+    .ok {color: #4ade80;}
+    pre {background: #0b0e14; border: 1px solid #505050; padding: 0.75rem; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: 0.9rem;}
+    .hidden {display: none;}
+    label {color: #c0c0c0;}
+    input, select {background: #0d0d0d; color: #e6edf3; border: 1px solid #505050; padding: 0.4rem; font-family: monospace;}
+    button {background: #2a2a2a; color: #e6edf3; border: 1px solid #505050; padding: 0.5rem 1rem; cursor: pointer;}
     button:hover {background: #3a3a3a;}
-    input, select {background: #0d0d0d; color: #c0c0c0; border: 1px solid #505050; padding: 0.5rem;}
     .status {color: #4a9f4a; margin: 0.5rem 0;}
     .error {color: #a94a4a; margin: 0.5rem 0;}
-    .room-handle {font-family: monospace; background: #0d0d0d; padding: 0.2rem 0.5rem; border-radius: 3px; margin: 0.2rem 0;}
   </style>
 </head>
 <body>
   <h1>OTC Proof Trading Desk</h1>
+  <div class="tabs">
+    <button onclick="show('health')">Health</button>
+    <button onclick="show('board')">Bounty Board</button>
+    <button onclick="show('ticket')">Trade Ticket</button>
+    <button onclick="show('escrow')">Escrow + KB</button>
+  </div>
 
-  <section class="health" id="healthSection">
+  <div class="card" id="health">
     <h2>Health</h2>
-    <div id="health">Loading...</div>
+    <div class="kv"><span class="k">Backend:</span><span class="v" id="healthBackend">loading...</span></div>
+    <div class="kv"><span class="k">Server:</span><span class="v" id="healthServer">loading...</span></div>
+    <div class="kv"><span class="k">Relay:</span><span class="v" id="healthRelay">loading...</span></div>
+    <div id="healthStatus" class="status"></div>
     <button onclick="refreshHealth()">Refresh</button>
-  </section>
+  </div>
 
-  <section class="board" id="boardSection">
+  <div class="card" id="board" class="hidden">
     <h2>Bounty Board</h2>
     <div id="board">Loading board...</div>
     <button onclick="refreshBoard()">Refresh Board</button>
-  </section>
+  </div>
 
-  <section class="ticket" id="ticketSection" style="display:none">
+  <div class="card" id="ticket" class="hidden">
     <h2>Trade Ticket</h2>
     <label>Ticket ID: <input type="text" id="ticketId" value="trade-1234"></label><br>
-    <label>Layer: <select id="layerSelect"><option value="L0">L0 (public)</option><option value="L1">L1 (peer)</option><option value="L2">L2 (escrow)</option><option value="L3">L3 (self)</option></select></label><br>
-    <label>Mode: <select id="modeSelect"><option value="hashChained">hashChained</option><option value="quorumMofN">quorumMofN</option><option value="trustDispute">trustDispute</option></select></label><br>
-    <label>Rail: <select id="railSelect"><option value="A">A (units)</option><option value="B">B (metameme)</option><option value="C">C (credits)</option><option value="D">D (oob)</option></select></label><br>
+    <label>Layer: <select id="layerSelect">
+      <option value="L0">L0 (public)</option>
+      <option value="L1">L1 (peer)</option>
+      <option value="L2">L2 (escrow)</option>
+      <option value="L3">L3 (self)</option>
+    </select></label><br>
+    <label>Mode: <select id="modeSelect">
+      <option value="hashChained">hashChained</option>
+      <option value="quorumMofN">quorumMofN</option>
+      <option value="trustDispute">trustDispute</option>
+    </select></label><br>
+    <label>Rail: <select id="railSelect">
+      <option value="A">A (units)</option>
+      <option value="B">B (metameme)</option>
+      <option value="C">C (credits)</option>
+      <option value="D">D (oob)</option>
+    </select></label><br>
     <label>Deposit: <input type="number" id="deposit" value="1000"></label><br>
     <button onclick="postTicket()">Post Ticket</button>
     <div class="status" id="ticketStatus"></div>
-  </section>
+  </div>
 
-  <section class="escrow" id="escrowSection" style="display:none">
+  <div class="card" id="escrow" class="hidden">
     <h2>Escrow State</h2>
     <label>Escrow ID: <input type="text" id="escrowId" value="escrow-1234"></label><br>
     <button onclick="getEscrowState()">Get State</button>
     <div class="status" id="escrowStatus"></div>
-  </section>
+  </div>
 
-  <section class="kb" id="kbSection" style="display:none">
+  <div class="card" id="kb" class="hidden">
     <h2>KB Query</h2>
     <label>Query: <input type="text" id="kbQuery" value="lean theorem"></label><br>
     <button onclick="queryKB()">Query KB</button>
     <div class="status" id="kbStatus"></div>
-  </section>
+  </div>
 
-  <script>
-    async function refreshHealth() {
-      try {
-        const r = await fetch('/health');
-        const d = await r.json();
-        document.getElementById('health').innerText = JSON.stringify(d, null, 2);
-      } catch(e) {
-        document.getElementById('health').innerText = 'Error: ' + e.message;
-      }
-    }
+<script>
+const $=id=>document.getElementById(id);
+const hide=()=>document.querySelectorAll('.card').forEach(s=>s.classList.add('hidden'));
+const show=(id)=>{hide();$(id).classList.remove('hidden');window.location.hash=id};
 
-    async function refreshBoard() {
-      try {
-        const r = await fetch('/desk/board');
-        const d = await r.json();
-        document.getElementById('board').innerText = JSON.stringify(d.board, null, 2);
-      } catch(e) {
-        document.getElementById('board').innerText = 'Error: ' + e.message;
-      }
-    }
+async function refreshHealth(){
+  try{
+    const r=await fetch('/health');
+    const d=await r.json();
+    $('healthBackend').textContent=d.name||'unknown';
+    $('healthServer').textContent=d.server||'unknown';
+    $('healthRelay').textContent=`rooms=${d.rooms||0} lines=${d.lines||0} sockets=${d.sockets||0}`;
+    $('healthStatus').textContent=d.ok?'ok':'error';
+  }catch(e){
+    $('healthStatus').textContent='error: '+e.message;
+  }
+}
 
-    async function postTicket() {
-      try {
-        const ticketId = document.getElementById('ticketId').value;
-        const layer = document.getElementById('layerSelect').value;
-        const mode = document.getElementById('modeSelect').value;
-        const rail = document.getElementById('railSelect').value;
-        const deposit = document.getElementById('deposit').value;
-        
-        const r = await fetch('/desk/ticket', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ticketId, layer, mode, rail, deposit})
-        });
-        const d = await r.json();
-        document.getElementById('ticketStatus').innerText = d.ok ? 'Ticket posted successfully' : 'Error: ' + (d.error || '');
-        if (d.ok) showSection('escrowSection');
-      } catch(e) {
-        document.getElementById('ticketStatus').innerText = 'Error: ' + e.message;
-      }
-    }
+async function refreshBoard(){
+  try{
+    const r=await fetch('/desk/board');
+    const d=await r.json();
+    const b=d.board||{bounties:[]};
+    $('board').innerHTML=b.bounties.map(x=>`<div class="kv"><span class="k">${x.id}</span><span class="v">${x.lane} ${x.price} ${x.escrowMode}</span></div>`).join('')||'No bounties';
+  }catch(e){
+    $('board').textContent='Error: '+e.message;
+  }
+}
 
-    async function getEscrowState() {
-      try {
-        const id = document.getElementById('escrowId').value;
-        const r = await fetch(`/desk/escrow/${id}`);
-        const d = await r.json();
-        document.getElementById('escrowStatus').innerText = d.ok ? JSON.stringify(d.escrow, null, 2) : 'Error: ' + (d.error || '');
-      } catch(e) {
-        document.getElementById('escrowStatus').innerText = 'Error: ' + e.message;
-      }
-    }
+async function postTicket(){
+  try{
+    const ticketId=$('ticketId').value;
+    const layer=$('layerSelect').value;
+    const mode=$('modeSelect').value;
+    const rail=$('railSelect').value;
+    const deposit=$('deposit').value;
+    const r=await fetch('/desk/ticket',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticketId,layer,mode,rail,deposit})});
+    const d=await r.json();
+    $('ticketStatus').textContent=d.ok?'Ticket posted successfully':'Error: '+(d.error||'');
+    if(d.ok)show('escrow');
+  }catch(e){
+    $('ticketStatus').textContent='Error: '+e.message;
+  }
+}
 
-    async function queryKB() {
-      try {
-        const query = document.getElementById('kbQuery').value;
-        const r = await fetch(`/desk/kb?q=${encodeURIComponent(query)}`);
-        const d = await r.json();
-        document.getElementById('kbStatus').innerText = d.ok ? 'Found ' + d.results.length + ' results' : 'Error: ' + (d.error || '');
-      } catch(e) {
-        document.getElementById('kbStatus').innerText = 'Error: ' + e.message;
-      }
-    }
+async function getEscrowState(){
+  try{
+    const id=$('escrowId').value;
+    const r=await fetch('/desk/escrow/'+encodeURIComponent(id));
+    const d=await r.json();
+    $('escrowStatus').textContent=d.ok?JSON.stringify({id:d.escrow?.id,status:d.escrow?.status,balance:d.escrow?.currentBalance},null,2):'Error: '+(d.error||'');
+  }catch(e){
+    $('escrowStatus').textContent='Error: '+e.message;
+  }
+}
 
-    function showSection(id) {
-      // Hide all sections
-      document.querySelectorAll('.board, .ticket, .escrow, .kb').forEach(s => s.style.display = 'none');
-      // Show selected
-      document.getElementById(id).style.display = 'block';
-    }
+async function queryKB(){
+  try{
+    const q=$('kbQuery').value;
+    const r=await fetch('/desk/kb?q='+encodeURIComponent(q));
+    const d=await r.json();
+    $('kbStatus').textContent=d.ok?'Found '+d.results.length+' results':(d.error||'Error');
+  }catch(e){
+    $('kbStatus').textContent='Error: '+e.message;
+  }
+}
 
-    // Init
-    refreshHealth();
-    refreshBoard();
-  </script>
+window.addEventListener('hashchange',()=>{const id=window.location.hash.slice(1);if(id)show(id)});
+show('health');
+refreshHealth();
+refreshBoard();
+</script>
 </body>
 </html>

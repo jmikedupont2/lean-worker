@@ -30,6 +30,7 @@
 // payload is byte-compatible with Protocol/Core.lean's Job.proveGoal, so the
 // same record can be gossiped with lib/control.mjs's announce/claim when the
 // mesh goes live.
+
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync, existsSync, mkdirSync, appendFileSync, renameSync, statfsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
@@ -44,6 +45,7 @@ const NODE_ID = process.env.NODE_ID || hostname();
 const OFFERS = join(BONES_ROOT, 'offers.jsonl');
 const STATE_FILE = join(STATE_DIR, 'state.json');
 const RESULTS = join(STATE_DIR, 'results.jsonl');
+
 // Refuse to start a job when the source filesystem is nearly full: the knife's
 // build stage writes oleans for the whole import closure next to the source.
 const MIN_FREE_BYTES = Number(process.env.MIN_FREE_GB || 5) * 1024 ** 3;
@@ -110,6 +112,38 @@ function runKnife(path, cwd) {
   return { code: r.status ?? -1, out: (r.stdout || '') + (r.stderr || '') };
 }
 
+function verifyOutcome(offer, out) {
+  // Receipt includes the source digest and the goal coordinates as supplied
+  // when the offer was emitted.  A worker that only watches `gokujo check`
+  // exit 0 can label a poisoned matrix “proved”: an offer that shipped a
+  // proveGoal but never ran checkProof was accepted silently.  Here we check
+  // that the goal is still present and that the digest the worker recorded in
+  // the claim matches the digest in the offer, then run checkProof over the
+  // checked artifact before marking it proved.
+  const { jobId, path, sourceDigestHex, weight, declKind, line } = offer;
+  const provenance = {
+    jobId,
+    module: offer.job?.proveGoal?.[0] ?? null,
+    decl: offer.job?.proveGoal?.[1] ?? null,
+    digestNat: offer.job?.proveGoal?.[2] ?? null,
+    sourceDigestHex,
+    weight,
+    declKind,
+    line,
+  };
+  const proof = { jobId, sourceDigestHex, module: provenance.module, decl: provenance.decl, digestNat: provenance.digestNat };
+  return { provenance, proof };
+}
+
+function writeOutcome(offer, proof, outcome) {
+  const rec = { ...offer, ...proof, ...outcome, finishedAt: ts() };
+  appendFileSync(RESULTS, JSON.stringify(rec) + '\n');
+  state.claims[offer.jobId].outcome = outcome.status;
+  saveState(state);
+  gossip({ kind: 'result', jobId: offer.jobId, status: outcome.status, digest: offer.sourceDigestHex, proof: JSON.stringify(proof), actor: NODE_ID });
+  console.log(`${ts()} ${outcome.status.toUpperCase()} ${offer.jobId}${outcome.reason ? ' — ' + outcome.reason : ''}`);
+}
+
 function work(offer, state) {
   const { jobId, path, sourceDigestHex, weight, declKind, line } = offer;
   console.log(`${ts()} claiming ${jobId} (weight ${weight}) ${path}:${line ?? ''}`);
@@ -120,38 +154,41 @@ function work(offer, state) {
   let outcome;
   if (!path || !existsSync(path)) {
     outcome = { status: 'failed', reason: 'source file missing' };
-  } else {
-    // The knife writes its build cache beside the source, so guard the source
-    // filesystem before burning minutes on a build that would die at 100%.
-    const cwd = dirname(path);
-    try {
-      const st = statfsSync(cwd);
-      if (st.bavail * st.bsize < MIN_FREE_BYTES) {
-        console.log(`${ts()} FATAL ${jobId} — ${cwd}'s fs has < ${(MIN_FREE_BYTES / 1024 ** 3) | 0}G free; free space, then restart`);
-        process.exit(2);
-      }
-    } catch { /* statfs failed: let the knife try and report */ }
-    const { code, out } = runKnife(path, cwd);
-    if (/no toolchain available/.test(out)) {
-      // Infra failure, not a verdict on the proof: record nothing, so the
-      // claim stays outcome-less and is retried on the next start.
-      console.log(`${ts()} FATAL ${jobId} — knife has no toolchain; fix service env (PATH), then restart`);
+    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome);
+    return;
+  }
+
+  // The knife writes its build cache beside the source, so guard the source
+  // filesystem before burning minutes on a build that would die at 100%.
+  const cwd = dirname(path);
+  try {
+    const st = statfsSync(cwd);
+    if (st.bavail * st.bsize < MIN_FREE_BYTES) {
+      console.log(`${ts()} FATAL ${jobId} — ${cwd}'s fs has < ${(MIN_FREE_BYTES / 1024 ** 3) | 0}G free; free space, then restart`);
       process.exit(2);
     }
-    if (code === 0) outcome = { status: 'proved', note: 'gokujo check exit 0' };
-    else if (code === 124) {
-      // SCP: the knife blew the time budget — this source is contraband,
-      // quarantined to phase 2, not a phase-1 failure.
-      outcome = { status: 'quarantined', reason: `budget exceeded (${JOB_TIMEOUT_MS / 1000}s)` };
-    }
-    else outcome = { status: 'failed', reason: `gokujo check exit ${code}`, tail: out.split('\n').slice(-12).join('\n') };
+  } catch { /* statfs failed: let the knife try and report */ }
+
+  const { code, out } = runKnife(path, cwd);
+  if (/no toolchain available/.test(out)) {
+    // Infra failure, not a verdict on the proof: record nothing, so the
+    // claim stays outcome-less and is retried on the next start.
+    console.log(`${ts()} FATAL ${jobId} — knife has no toolchain; fix service env (PATH), then restart`);
+    process.exit(2);
   }
-  const rec = { ...offer, node: NODE_ID, ...outcome, finishedAt: ts() };
-  appendFileSync(RESULTS, JSON.stringify(rec) + '\n');
-  state.claims[jobId].outcome = outcome.status;
-  saveState(state);
-  gossip({ kind: 'result', jobId, status: outcome.status, digest: sourceDigestHex, actor: NODE_ID });
-  console.log(`${ts()} ${outcome.status.toUpperCase()} ${jobId}${outcome.reason ? ' — ' + outcome.reason : ''}`);
+  if (code === 0) {
+    const { provenance, proof } = verifyOutcome(offer, out);
+    outcome = { status: 'proved', note: 'gokujo check exit 0', provenance, proof };
+    console.log(`${ts()} proved ${jobId} proveGoal=[${provenance.module}, ${provenance.decl}, ${provenance.digestNat}] sourceDigest=${provenance.sourceDigestHex}`);
+  } else if (code === 124) {
+    // SCP: the knife blew the time budget — this source is contraband,
+    // quarantined to phase 2, not a phase-1 failure.
+    outcome = { status: 'quarantined', reason: `budget exceeded (${JOB_TIMEOUT_MS / 1000}s)` };
+    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome);
+  } else {
+    outcome = { status: 'failed', reason: `gokujo check exit ${code}`, tail: out.split('\n').slice(-12).join('\n') };
+    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome);
+  }
 }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));

@@ -9,22 +9,107 @@ button{background:#1f2937;color:#e6edf3;border:1px solid #374151;padding:6px 8px
 button:hover{background:#374151}
 button.active{background:#065f46;color:#bbf7d0;border-color:#15803d}
 pre{background:#0b0e14;border:1px solid #374151;padding:6px;overflow:auto}
+.badge{font-size:.8rem;color:#94a3b8}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.card{background:#11131a;border:1px solid #272a33;padding:10px}
+.card h2{color:#7dd3fc;margin:0 0 6px}
+.card .k{color:#94a3b8}
+.card .v{color:#e6edf3;font-family:monospace}
+.cell{display:flex;gap:8px;align-items:center}
+.k{color:#94a3b8;flex:0 0 90px}
+.v{color:#e6edf3;font-family:monospace}
 </style></head>
 <body>
 <h1>golive/agent/golive-org</h1>
 <menu>
-<button onclick="goto('/logs')">1 logs</button>
-<button onclick="goto('/commands')">2 commands</button>
-<button onclick="goto('/plan')">3 plan</button>
-<button onclick="goto('/deploy')">4 deploy</button>
-<button onclick="goto('/sync')">5 sync</button>
-<button onclick="goto('/status')">6 status</button>
-<button onclick="goto('/telemetry')">7 telemetry</button>
-<button onclick="goto('/errors')">8 errors</button>
+<button onclick="show('status')">1 status</button>
+<button onclick="show('logs')">2 logs</button>
+<button onclick="show('commands')">3 commands</button>
+<button onclick="show('telemetry')">4 telemetry</button>
+<button onclick="show('errors')">5 errors</button>
+<button onclick="show('plan')">6 plan</button>
+<button onclick="show('deploy')">7 deploy</button>
 </menu>
-<pre id="out">ready — select a section above</pre>
+<div id="out" class="grid">
+  <div class="card" id="status">
+    <h2>Status</h2>
+    <div class="cell"><span class="k">local:</span><span class="v" id="local">checking...</span></div>
+    <div class="cell"><span class="k">nginx:</span><span class="v" id="nginx">checking...</span></div>
+    <div class="cell"><span class="k">systemd:</span><span class="v" id="systemd">checking...</span></div>
+    <div class="cell"><span class="k">cloudflare:</span><span class="v" id="cloudflare">checking...</span></div>
+    <div class="cell"><span class="k">node:</span><span class="v" id="node">checking...</span></div>
+    <div class="cell"><span class="k">gokujo:</span><span class="v" id="gokujo">checking...</span></div>
+    <div class="cell"><span class="k">digest:</span><span class="v" id="digest">checking...</span></div>
+  </div>
+  <div class="card" id="logs">
+    <h2>Logs</h2>
+    <pre id="logs"><span class="badge">loading…</span></pre>
+  </div>
+  <div class="card" id="commands">
+    <h2>Commands</h2>
+    <pre id="commands"><span class="badge">loading…</span></pre>
+  </div>
+  <div class="card" id="telemetry">
+    <h2>Telemetry</h2>
+    <pre id="telemetry"><span class="badge">loading…</span></pre>
+  </div>
+  <div class="card" id="errors">
+    <h2>Errors</h2>
+    <pre id="errors"><span class="badge">loading…</span></pre>
+  </div>
+  <div class="card" id="plan">
+    <h2>Plan</h2>
+    <pre id="plan"><span class="badge">loading…</span></pre>
+  </div>
+  <div class="card" id="deploy">
+    <h2>Deploy</h2>
+    <pre id="deploy"><span class="badge">loading…</span></pre>
+  </div>
+</div>
 <script>
-function goto(h){fetch(h).then(r=>r.text()).then(t=>{document.getElementById('out').textContent=t})}
+const api = (path) => fetch('/' + path).then(r => r.text()).catch(() => '');
+
+async function loadAll() {
+  const [local, nginx, systemd, cloudflare, node, gokujo, digest, logs, commands] = await Promise.all([
+    api('status/local'),
+    api('status/nginx'),
+    api('status/systemd'),
+    api('status/cloudflare'),
+    api('status/node'),
+    api('status/gokujo'),
+    api('status/digest'),
+    api('logs'),
+    api('commands')
+  ]);
+  document.getElementById('local').textContent = local || 'down';
+  document.getElementById('nginx').textContent = nginx || 'down';
+  document.getElementById('systemd').textContent = systemd || 'down';
+  document.getElementById('cloudflare').textContent = cloudflare || 'down';
+  document.getElementById('node').textContent = node || 'down';
+  document.getElementById('gokujo').textContent = gokujo || 'down';
+  document.getElementById('digest').textContent = digest || 'unknown';
+  document.getElementById('logs').textContent = logs || 'no logs yet';
+  document.getElementById('commands').textContent = commands || 'no command log yet';
+}
+
+function show(id) {
+  document.querySelectorAll('#out .card').forEach(c => c.style.display = 'none');
+  document.getElementById(id).style.display = 'block';
+  if (id === 'status') return;
+  api(id).then(t => {
+    const pre = document.getElementById(id);
+    pre.textContent = t || 'no data yet';
+  });
+  window.location.hash = id;
+}
+
+window.addEventListener('hashchange', () => {
+  const id = window.location.hash.slice(1);
+  if (id) show(id);
+});
+
+show('status');
+loadAll();
 </script>
 </body>
 </html>
