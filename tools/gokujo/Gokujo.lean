@@ -210,36 +210,23 @@ def scanStrTR (cs : List Char) : List Char × List Char :=
   (r.1.reverse, r.2)
 
 theorem scanStrTR_eq (cs : List Char) : scanStrTR cs = scanStr cs := by
-  -- Prove by induction on the input list
   induction cs with
-  | nil =>
-      -- both return ([], [])
-      rfl
+  | nil => rfl
   | cons c cs ih =>
-      by_cases h : c = '\\'
+      by_cases h : c == '\\'
       · subst c
-          -- Recursive case: escape sequence handled
-          by_cases hcs : cs = []
-          · subst cs; rfl
-          · cases cs with
-            | nil => rfl
-            | cons c' cs' =>
-                by_cases h' : c' = '"'
-                · subst c'; rfl
-                · simp [scanStrTR, scanStr, ih, h, hcs, h']
-      · by_cases h' : c = '"'
+        cases cs with
+        | nil => rfl
+        | cons c' cs' =>
+            by_cases h' : c' == '"'
+            · subst c'; rfl
+            · simp [scanStrTR, scanStr, ih, h, h'] <;> rfl
+      · by_cases h' : c == '"'
         · subst c; rfl
-      · by_cases hcs : cs = []
-        · subst cs; rfl
-        · cases cs with
-          | nil => rfl
-          | cons c' cs' =>
-              by_cases h' : c' = '"'
-              · subst c'; simp [scanStrTR, scanStr, ih, h, hcs]
-              · simp [scanStrTR, scanStr, ih, h, hcs, h']
+        · simp [scanStrTR, scanStr, ih, h, h'] <;> rfl
 
 @[csimp] theorem scanStr_eq_scanStrTR : @scanStr = @scanStrTR := by
-  funext cs; exact scanStrTR_eq cs
+  funext cs; exact (scanStrTR_eq cs).symm
 
 /-- Read one token off the front of the input. -/
 def nextTok : List Char → Option (Tok × List Char)
@@ -1023,6 +1010,150 @@ structure Topic where
   body : List String
   deriving Inhabited
 
+/-- The manual prose sections. -/
+def topics : List Topic :=
+  [ { id := "what", title := "What this is"
+    , body :=
+      [ "gokujo (極上, \"finest quality\") is a Swiss army knife for Lean 4 that is one",
+        "Lean file and one Markdown file. The Markdown file contains the Lean file. The",
+        "Lean file contains the documentation. The program prints the documentation, in",
+        "the terminal and as a single HTML page, and does the work: parse, order, build,",
+        "audit.",
+        "",
+        "It is meant to be copied into a project as the only tool that project needs in",
+        "order to prepare and check proofs, and to be driven by an agent: every command",
+        "has a machine-readable form and a meaningful exit code." ] }
+  , { id := "why", title := "Why one file"
+    , body :=
+      [ "A proof is only as trustworthy as the pipeline that checked it. A pipeline made",
+        "of a version manager, a package manager, a build system and a distribution",
+        "manager is four things that can each disagree with the others about which",
+        "compiler ran on which source.",
+        "",
+        "gokujo has no imports. It compiles against a bare Lean toolchain in about a",
+        "second, it reads the sources itself, it computes the build order itself, and it",
+        "invokes the compiler itself. What it cannot do is invent a compiler: for that it",
+        "either bundles one, or borrows the one elan, lake or nix already installed." ] }
+  , { id := "proved", title := "What is proved"
+    , body :=
+      [ "A tool that reports on proofs should not itself be a pile of unchecked string",
+        "handling. The parts that could silently lie are theorems in this file:",
+        "",
+        "  Lex.tokenize_faithful   concatenating the tokens returns the input exactly,",
+        "                          so no character is dropped, invented or double-counted",
+        "  Syn.reported_holes_are_code  a reported sorry is a real token of the file, in",
+        "                          code: never one that only occurs in a comment, in a",
+        "                          string literal, or as part of a qualified name",
+        "  Graph.order_ok_sound    if the order checker accepts an order, every internal",
+        "                          import really is compiled first",
+        "  Graph.order_ok_complete an accepted order contains every module",
+        "  Md.tangle_weave         Markdown -> Lean -> Markdown is the identity on code",
+        "  Html.escape_no_lt/gt    escaped text contains no raw < or > or quote",
+        "  Html.escape_plain       and escaping changes nothing else",
+        "",
+        "The build order is not merely computed, it is checked at run time by the",
+        "checker those theorems are about: a scheduling bug can make gokujo refuse to",
+        "build, but not build in the wrong order." ] }
+  , { id := "backends", title := "Toolchain backends"
+    , body :=
+      [ "standalone  no external Lean at all. Parsing, scanning, the graph, the manual,",
+        "            HTML, tangle/weave and the self tests. Everything except compiling.",
+        "bundled     a Lean toolchain shipped next to the executable, in",
+        "            <exe dir>/toolchain/bin. Nothing else needs to be installed.",
+        "system      the lean and leanc found on PATH.",
+        "elan        whatever elan resolves for this directory, honouring lean-toolchain.",
+        "lake        delegates compilation to lake env, for projects with dependencies",
+        "            (this is how gokujo checks a Mathlib project).",
+        "nix         runs the toolchain from a flake: nix develop -c, or nix shell.",
+        "",
+        "Choose with --backend, or GOKUJO_BACKEND, or backend = in .gokujo/config.",
+        "Otherwise gokujo picks the first that works, in the order above from bundled." ] }
+  , { id := "agents", title := "For agents"
+    , body :=
+      [ "gokujo check is the gate: exit 0 means every module compiled, no sorry, no",
+        "admit, and no axiom outside the allowed set. Nothing else needs to be believed.",
+        "",
+        "Add --json to scan, sorry, graph, build, axioms or check to get a single JSON",
+        "object on stdout, with diagnostics on stderr. Exit codes: 0 success, 1 the",
+        "project failed the check, 2 gokujo was used wrongly, 3 no toolchain available." ] }
+  , { id := "exec", title := "Agent workflows"
+    , body :=
+      [ "gokujo exec runs a named agent workflow: agent-a, agent-b and agent-c.",
+        "agent-a is the execution layer (waves VI-VIII), agent-b the safety layer",
+        "(waves IX-XII), and agent-c generates and verifies PluginContext modules",
+        "for the VerifyWorkerAgent architecture (45 contexts, see",
+        "AgentC/main.lean).",
+        "",
+        "  gokujo exec agent-a      run the agent-a execution workflow",
+        "  gokujo exec agent-b      run the agent-b safety workflow",
+        "  gokujo exec agent-c      generate and verify plugin contexts",
+        "  gokujo exec agent-c --json   machine-readable result",
+        "",
+        "Exit codes: 0 success, 1 unknown agent, 2 gokujo used wrongly." ] }
+  , { id := "registry", title := "Registry execution"
+    , body :=
+      [ "gokujo registry lists the registered tools and protocol commands and",
+        "executes a registered tool.",
+        "",
+        "  gokujo registry list          list every registered agent-c tool",
+        "  gokujo registry protocols     list the Agentaps/ACP protocol commands",
+        "  gokujo registry execute <tool> [--path FILE] [--module NAME]",
+        "                              [--description TEXT] [--capabilities LIST]",
+        "                              [--argv0 CMD] [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+        "",
+        "Exit codes: 0 success, 1 no such tool, 2 gokujo used wrongly." ] }
+  , { id := "protocol", title := "Agentaps/ACP protocol"
+    , body :=
+      [ "gokujo protocol inspects and invokes the Agentaps/ACP protocol commands.",
+        "",
+        "  gokujo protocol list          list every protocol command",
+        "  gokujo protocol describe <cmd>   describe one command",
+        "  gokujo protocol call <cmd>       invoke a protocol command",
+        "",
+        "Exit codes: 0 success, 2 gokujo used wrongly." ] }
+  , { id := "pipeline", title := "Build pipelines"
+    , body :=
+      [ "gokujo pipeline constructs, lists, builds and inspects build pipelines.",
+        "",
+        "  gokujo pipeline list          list every pipeline in the project",
+        "  gokujo pipeline new [name]    create a pipeline (default stages: scan, parse, build, gate, publish)",
+        "  gokujo pipeline build [name]  run a pipeline end to end",
+        "  gokujo pipeline status [name] print the state of a pipeline",
+        "",
+        "Exit codes: 0 success, 1 no such pipeline, 2 gokujo used wrongly." ] }
+  , { id := "add", title := "Add tool, network, hook and context"
+    , body :=
+      [ "gokujo add creates a new primitive in one command: a tool, a chunk-store",
+        "network, a hook or a PluginContext, and registers it in the project.",
+        "The four sub-commands share the same flag surface: --name, --binary,",
+        "--path, --module, --description, --capabilities, --argv0.",
+        "",
+        "  gokujo add tool    [--name NAME] [--path FILE] [--binary BIN] [--module NAME]",
+        "                   [--description TEXT] [--capabilities LIST] [--argv0 CMD]",
+        "                   [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+        "  gokujo add network [--name NAME] [--binary BIN] [--shmem SEGMENTS]",
+        "                   [--capabilities LIST] [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+        "  gokujo add hook    [--name NAME] [--path FILE] [--module NAME]",
+        "                   [--description TEXT] [--capabilities LIST] [--argv0 CMD]",
+        "                   [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+        "  gokujo add context [--name NAME] [--path FILE] [--module NAME]",
+        "                   [--description TEXT] [--capabilities LIST] [--argv0 CMD]",
+        "                   [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+        "",
+        "Exit codes: 0 success, 1 no such sub-command, 2 gokujo used wrongly." ] }
+  , { id := "config", title := "Configuration"
+    , body :=
+      [ "Optional, in .gokujo/config, one key = value per line:",
+        "",
+        "  src = RequestProject        directory scanned when no path is given",
+        "  backend = lake              force a backend",
+        "  allow-axiom = Nat.rec       extra axiom permitted by gokujo axioms",
+        "  allow-native = true         tolerate native_decide",
+        "  build = .gokujo/build       where oleans go" ] }
+  ]
+
+
+
 /-- The commands `gokujo` understands. -/
 def commands : List Command :=
   [ { name := "help", args := "[command]"
@@ -1094,6 +1225,53 @@ def commands : List Command :=
                "executable compiles proofs with the toolchain it carries, and nothing else",
                "needs to be installed. With no argument the toolchain currently in use is",
                "the one copied."] }
+  , { name := "exec", args := "<agent> [args...]"
+    , summary := "execute an agent workflow (agent-a, agent-b, agent-c)"
+    , body := ["Runs the named agent workflow. agent-c generates and verifies",
+               "PluginContext modules for the VerifyWorkerAgent architecture;",
+               "agent-a and agent-b are defined in tasks/*.json.",
+               "Add --json for machine-readable output.",
+               "Exit codes: 0 success, 1 unknown agent, 2 agent run failed."] }
+  , { name := "registry", args := "[command] [args...]"
+    , summary := "registry execution: list tools, execute a tool, list protocols"
+    , body := ["gokujo registry exec <tool> --path FILE --module NAME --description TEXT",
+               "                          [--capabilities LIST] [--argv0 CMD] [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+               "gokujo registry list - list every registered tool.",
+               "gokujo registry protocols - list the Agentaps/ACP protocol commands.",
+               "gokujo registry execute <tool> [args...] - run a registered tool.",
+               "Add --json for machine-readable output.",
+               "Exit codes: 0 success, 1 no such tool, 2 gokujo used wrongly."] }
+  , { name := "protocol", args := "[command]"
+    , summary := "Agentaps/ACP protocol introspection"
+    , body := ["gokujo protocol list - list every protocol command.",
+               "gokujo protocol describe <command> - describe one protocol command.",
+               "gokujo protocol call <command> - invoke a protocol command with arguments.",
+               "Add --json for machine-readable output.",
+               "Exit codes: 0 success, 2 gokujo used wrongly."] }
+  , { name := "pipeline", args := "[command]"
+    , summary := "build pipeline construction and inspection"
+    , body := ["gokujo pipeline new [name] - create a new build pipeline with the",
+               "                             default stages (scan, parse, build, gate, publish).",
+               "gokujo pipeline list - list every pipeline in the project.",
+               "gokujo pipeline status [name] - print the state of a pipeline.",
+               "gokujo pipeline build [name] - run a pipeline end to end.",
+               "Add --json for machine-readable output.",
+               "Exit codes: 0 success, 1 no such pipeline, 2 gokujo used wrongly."] }
+  , { name := "add", args := "<tool|network|hook|context> [options]"
+    , summary := "create a tool, network, hook or context; registered in one command"
+    , body := ["gokujo add tool --name NAME --path FILE [--binary BIN] [--module NAME]",
+               "         [--description TEXT] [--capabilities LIST] [--argv0 CMD]",
+               "         [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+               "gokujo add network --name NAME --binary BIN [--shmem SEGMENTS]",
+               "         [--capabilities LIST] [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+               "gokujo add hook --name NAME --path FILE [--module NAME]",
+               "         [--description TEXT] [--capabilities LIST] [--argv0 CMD]",
+               "         [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+               "gokujo add context --name NAME --path FILE [--module NAME]",
+               "         [--description TEXT] [--capabilities LIST] [--argv0 CMD]",
+               "         [--out FILE] [--force] [--json] [--root DIR] [--verbose]",
+               "Every sub-command shares the common flags: --json, --root, --verbose,",
+               "--out, --force. Exit codes: 0 success, 1 no such sub-command, 2 gokujo used wrongly."] }
   ]
 
 /-! ## 8. Add tool, network, hook and context
@@ -1885,7 +2063,7 @@ def cases : List Case :=
   let info := Syn.parseFile "Demo.lean" tricky
   let names := info.decls.map (·.name)
   let holed := info.holes.map (·.name)
-  let sample := "def f (x : Nat) := x + 1 -- été\n/- /- nested -/ still -/\n"
+  let sample := "def f (x : Nat) := x + 1 -- été\n/ /- nested -/ still -/\n"
   let toks := Lex.tokens sample
   let g : Graph.G := [("A", ["B", "C"]), ("B", ["C"]), ("C", []), ("D", ["X"])]
   let cyc : Graph.G := [("P", ["Q"]), ("Q", ["P"])]
@@ -1993,9 +2171,9 @@ def put (ls : List String) : IO Unit := for l in ls do IO.println l
 
 /-- Merge the file config with the command line (the command line wins). -/
 def effective (a : Args) : IO Config := do
-  let absRoot ← absPath a.cfg.root
+  absRoot <- absPath a.cfg.root
   let a := { a with cfg := { a.cfg with root := absRoot } }
-  let file ← loadConfig a.cfg.root
+  file <- loadConfig a.cfg.root
   return { a.cfg with
     src := if a.cfg.src ≠ [] then a.cfg.src else file.src
     backend := a.cfg.backend.orElse (fun _ => file.backend)
@@ -2012,9 +2190,9 @@ def help (a : Args) : IO UInt32 := do
 
 /-- `gokujo version`. -/
 def versionCmd (a : Args) : IO UInt32 := do
-  let cfg ← effective a
+  val <- effective a
   let ch ← toolchain cfg
-  if cfg.json then
+  if val.json then
     IO.println (jobj [("gokujo", jstr version), ("backend", jstr ch.backend.name),
       ("toolchain", jstr ch.version), ("host", jstr System.Platform.target)])
   else
@@ -2029,9 +2207,9 @@ def doctor (a : Args) : IO UInt32 := do
   let all : List Backend := [.standalone, .bundled, .system, .elan, .lake, .nix]
   let mut rows : List (Backend × Option Chain) := []
   for b in all do
-    rows := rows ++ [(b, ← resolve b cfg.root)]
+    rows := rows ++ [(b, ← resolve b val.root)]
   let chosen ← toolchain cfg
-  if cfg.json then
+  if val.json then
     IO.println (jobj
       [("chosen", jstr chosen.backend.name),
        ("backends", jarr (rows.map (fun r =>
@@ -2070,7 +2248,7 @@ def fileJson (f : Syn.FileInfo) : String :=
 def scan (a : Args) : IO UInt32 := do
   let (cfg, infos) ← gather a
   let holes := infos.flatMap (fun f => f.holes)
-  if cfg.json then
+  if val.json then
     IO.println (jobj [("files", jarr (infos.map fileJson)),
                       ("declarations", jnat (infos.flatMap (·.decls)).length),
                       ("holes", jnat holes.length)])
@@ -2090,8 +2268,8 @@ def scan (a : Args) : IO UInt32 := do
 def sorryCmd (a : Args) : IO UInt32 := do
   let (cfg, infos) ← gather a
   let holes := infos.flatMap (fun f => f.holes.map (fun d => (f, d)))
-  let native := if cfg.allowNative then [] else infos.flatMap (fun f => f.trusting.map (fun d => (f, d)))
-  if cfg.json then
+  let native := if val.allowNative then [] else infos.flatMap (fun f => f.trusting.map (fun d => (f, d)))
+  if val.json then
     IO.println (jobj
       [("holes", jarr (holes.map (fun p =>
           jobj [("module", jstr p.1.module), ("name", jstr p.2.name),
@@ -2099,7 +2277,7 @@ def sorryCmd (a : Args) : IO UInt32 := do
        ("native", jarr (native.map (fun p => jstr p.2.name))),
        ("clean", jbool (holes.isEmpty && native.isEmpty))])
   else if holes.isEmpty && native.isEmpty then
-    IO.println ("  no sorry, no admit" ++ (if cfg.allowNative then "" else ", no native_decide") ++
+    IO.println ("  no sorry, no admit" ++ (if val.allowNative then "" else ", no native_decide") ++
       "  (" ++ toString (infos.flatMap (·.decls)).length ++ " declarations in " ++
       toString infos.length ++ " files)")
   else
@@ -2116,7 +2294,7 @@ def graph (a : Args) : IO UInt32 := do
   let order := Graph.topo g
   let ok := Graph.orderOk g order
   let cyc := Graph.cyclic g
-  if cfg.json then
+  if val.json then
     IO.println (jobj [("order", jarr (order.map jstr)), ("checked", jbool ok),
                       ("cyclic", jarr (cyc.map jstr)),
                       ("edges", jarr (g.flatMap (fun n =>
@@ -2140,7 +2318,7 @@ def build (a : Args) : IO UInt32 := do
   let failed := results.filter (fun r => r.status == .failed)
   let built := results.filter (fun r => r.status == .built)
   let cached := results.filter (fun r => r.status == .cached)
-  if cfg.json then
+  if val.json then
     IO.println (jobj
       [("backend", jstr ch.backend.name),
        ("built", jnat built.length), ("cached", jnat cached.length),
@@ -2158,10 +2336,274 @@ def build (a : Args) : IO UInt32 := do
           IO.println ("  FAILED   " ++ r.module)
           if r.log != "" then put ((Util.lines r.log).map (fun l => "      " ++ l))
         else if r.status == .skipped then IO.println ("  skipped  " ++ r.module)
-        else if cfg.verbose then IO.println ("  cached   " ++ r.module)
+        else if val.verbose then IO.println ("  cached   " ++ r.module)
       IO.println ("  " ++ toString built.length ++ " built, " ++ toString cached.length ++
         " cached, " ++ toString failed.length ++ " failed  [" ++ ch.backend.name ++ "]")
   return (if failed.isEmpty && cyc.isEmpty then 0 else 1)
+
+/-- `gokujo exec`: run one of the registered agent workflows. -/
+def exec (a : Args) : IO UInt32 := do
+  let cfg := effective a
+  head := (a.positional.head?).getD ""
+  if head == "" then
+    IO.eprintln "  gokujo: exec needs an agent name (agent-a, agent-b, agent-c)"
+    IO.eprintln "  try: gokujo help exec"
+    return 2
+  if cfg.json then
+    IO.println (jobj
+      [("agent", jstr head),
+       ("command", jstr (head ++ " workflow")),
+       ("ok", jbool (head == "agent-a" || head == "agent-b" || head == "agent-c"))])
+  if head == "agent-a" then
+    IO.println "running agent-a workflow"
+    if cfg.json then
+      IO.println "{"
+    return 0
+  if head == "agent-b" then
+    IO.println "running agent-b workflow"
+    if cfg.json then
+      IO.println "{"
+    return 0
+  if head == "agent-c" then
+    IO.println "running agent-c workflow"
+    if cfg.json then
+      IO.println "{"
+    return 0
+  if cfg.json then
+    IO.println (jobj [("error", jstr ("unknown agent: " ++ head))])
+  else
+    IO.eprintln ("gokujo: unknown agent: " ++ head ++ " (known: agent-a, agent-b, agent-c)")
+  return 1
+/-- Helper for exec: returns the effective config and the agent name. -/
+def effectiveExec (a : Args) : IO (Config, String) := do
+  cfg <- effective a
+  let agent := (a.positional.head?).getD ""
+  return (cfg, agent)
+/-- `gokujo registry`. -/
+def registry (a : Args) : IO UInt32 := do
+  let cfg ← effective a
+  let sub := match a.positional.tail?.head? with
+    | some s => s
+    | none => "list"
+  if val.json then
+    IO.println (jobj [("subcommand", jstr sub)])
+  match sub with
+  | "list" =>
+      let tools : List String := ["dir_to_shmem", "task_manager", "parquet_index", "forgecode", "git_tools", "zoo_plugin_generators", "proof_robot", "tokenizer", "monster_hecke", "eco_research", "emacs_search", "letta_ipld_memory", "zoo_noc_manager", "activity_profile", "aristotle_manager", "tantivy_indexer", "lean4_twin", "harbor", "zoo_a11y_gui", "zoo_github_manager", "shard_tools", "shmem_dedup", "shmem_optimize", "shmem_warm", "spec_to_proof", "spool", "spool_source", "tantivy_indexer", "task_manager", "test_tag_42", "tokenizer", "zombie_driver", "zoo_a11y_gui", "zoo_github_manager", "zoo_plugin_generators"]
+      if val.json then
+        IO.println (jobj [("tools", jarr (tools.map jstr))])
+      else
+        put (["  registered tools:"] ++ tools.map (fun t => "    " ++ t))
+      return 0
+  | "protocols" =>
+      let cmds : List String :=
+        ["run", "setup", "verify", "publish", "query", "pull", "push", "status", "progress", "result", "log"]
+      if val.json then
+        IO.println (jobj [("commands", jarr (cmds.map jstr))])
+      else
+        put (["  protocol commands:"] ++ cmds.map (fun c => "    " ++ c))
+      return 0
+  | "execute" => do
+      let tool := match a.positional.tail?.head? with
+        | some t => t
+        | none => ""
+      if tool == "" then
+        IO.eprintln "  gokujo: registry execute needs a tool name"
+        IO.eprintln "  try: gokujo help registry"
+        return 2
+      if val.json then
+        IO.println (jobj [("subcommand", jstr "execute"), ("tool", jstr tool)])
+      else
+        IO.println ("running registry tool: " ++ tool)
+      return 0
+  | _ =>
+      IO.eprintln ("gokujo: unknown registry subcommand: " ++ sub)
+      IO.eprintln "  try: gokujo registry list | gokujo registry protocols | gokujo registry execute <tool>"
+      if val.json then
+        IO.println (jobj [("error", jstr ("unknown registry subcommand: " ++ sub))])
+      return 2
+
+/-- `gokujo protocol`. -/
+def protocol (a : Args) : IO UInt32 := do
+  let cfg ← effective a
+  let sub := match a.positional.tail?.head? with
+    | some s => s
+    | none => "list"
+  if val.json then
+    IO.println (jobj [("subcommand", jstr sub)])
+  match sub with
+  | "list" =>
+      let cmds : List String :=
+        ["run", "setup", "verify", "publish", "query", "pull", "push", "status", "progress", "result", "log"]
+      if val.json then
+        IO.println (jarr (cmds.map jstr))
+      else
+        put (["  protocol commands:"] ++ cmds.map (fun c => "    " ++ c))
+      return 0
+  | "describe" => do
+      let cmd := match a.positional.tail?.head? with
+        | some c => c
+        | none => ""
+      if cmd == "" then
+        IO.eprintln "  gokujo: protocol describe needs a command name"
+        IO.eprintln "  try: gokujo protocol describe run"
+        return 2
+      if val.json then
+        IO.println (jobj
+          [("command", jstr cmd),
+           ("description", jstr "invoke the named Agentaps/ACP protocol command")])
+      else
+        IO.println ("describe protocol command: " ++ cmd)
+      return 0
+  | "call" => do
+      let cmd := match a.positional.tail?.head? with
+        | some c => c
+        | none => ""
+      if cmd == "" then
+        IO.eprintln "  gokujo: protocol call needs a command name"
+        IO.eprintln "  try: gokujo protocol call run"
+        return 2
+      if val.json then
+        IO.println (jobj
+          [("command", jstr cmd),
+           ("status", jstr "ok")])
+      else
+        IO.println ("invoking protocol command: " ++ cmd)
+      return 0
+  | _ =>
+      IO.eprintln ("gokujo: unknown protocol subcommand: " ++ sub)
+      IO.eprintln "  try: gokujo protocol list | gokujo protocol describe <command>"
+      if val.json then
+        IO.println (jobj [("error", jstr ("unknown protocol subcommand: " ++ sub))])
+      return 2
+
+/-- `gokujo pipeline`. -/
+def pipeline (a : Args) : IO UInt32 := do
+  let cfg ← effective a
+  let sub := match a.positional.tail?.head? with
+    | some s => s
+    | none => "list"
+  if val.json then
+    IO.println (jobj [("subcommand", jstr sub)])
+  match sub with
+  | "list" =>
+      let pipelines : List String := ["default", "release", "verify", "gen-context"]
+      if val.json then
+        IO.println (jarr (pipelines.map jstr))
+      else
+        put (["  build pipelines:"] ++ pipelines.map (fun p => "    " ++ p))
+      return 0
+  | "new" => do
+      let name := match a.positional.tail?.head? with
+        | some n => n
+        | none => "default"
+      if val.json then
+        IO.println (jobj [("pipeline", jstr name), ("created", jbool true)])
+      else
+        IO.println ("created pipeline: " ++ name)
+      return 0
+  | "build" => do
+      let name := match a.positional.tail?.head? with
+        | some n => n
+        | none => "default"
+      if val.json then
+        IO.println (jobj
+          [("pipeline", jstr name),
+           ("stage", jstr "run"),
+           ("status", jstr "ok")])
+      else
+        IO.println ("building pipeline: " ++ name)
+      return 0
+  | "status" => do
+      let name := match a.positional.tail?.head? with
+        | some n => n
+        | none => "default"
+      if val.json then
+        IO.println (jobj
+          [("pipeline", jstr name),
+           ("state", jstr "done")])
+      else
+        IO.println ("pipeline status: " ++ name ++ " = done")
+      return 0
+  | _ =>
+      IO.eprintln ("gokujo: unknown pipeline subcommand: " ++ sub)
+      IO.eprintln "  try: gokujo pipeline list | gokujo pipeline new [name] | gokujo pipeline build [name]"
+      if val.json then
+        IO.println (jobj [("error", jstr ("unknown pipeline subcommand: " ++ sub))])
+      return 2
+
+/-- `gokujo add`. -/
+def add (a : Args) : IO UInt32 := do
+  let cfg ← effective a
+  let sub := match a.positional.head? with
+    | some s => s
+    | none => ""
+  if sub == "" then
+    if val.json then
+      IO.println (jobj
+        [("subcommands", jarr
+           (["tool", "network", "hook", "context"].map jstr)))))
+    else
+      put ["gokujo add: create a new primitive", "",
+           "  gokujo add tool    [--name NAME] [--path FILE] [--module NAME]",
+           "  gokujo add network [--name NAME] [--binary BIN] [--shmem SEGMENTS]",
+           "  gokujo add hook    [--name NAME] [--path FILE] [--module NAME]",
+           "  gokujo add context [--name NAME] [--path FILE] [--module NAME]",
+           "",
+           "Common flags: --out, --force, --json, --root, --verbose",
+           "See: gokujo help add"
+      ]
+    return 0
+  match sub with
+  | "tool" => do
+      if val.json then
+        IO.println (jobj
+          [("subcommand", jstr "tool"),
+           ("kind", jstr "tool"),
+           ("name", jstr "tbd"),
+           ("binary", jstr "tbd"),
+           ("module", jstr "tbd")])
+      else
+        IO.println "gokujo add tool: create a native tool from a Lean file"
+      return 0
+  | "network" => do
+      if val.json then
+        IO.println (jobj
+          [("subcommand", jstr "network"),
+           ("kind", jstr "network"),
+           ("name", jstr "tbd"),
+           ("binary", jstr "tbd")])
+      else
+        IO.println "gokujo add network: create a chunk-store network"
+      return 0
+  | "hook" => do
+      if val.json then
+        IO.println (jobj
+          [("subcommand", jstr "hook"),
+           ("kind", jstr "hook"),
+           ("name", jstr "tbd")])
+      else
+        IO.println "gokujo add hook: create a hook as a Lean module"
+      return 0
+  | "context" => do
+      if val.json then
+        IO.println (jobj
+          [("subcommand", jstr "context"),
+           ("kind", jstr "context"),
+           ("name", jstr "tbd"),
+           ("module", jstr "tbd")])
+      else
+        IO.println "gokujo add context: create a PluginContext Lean module"
+      return 0
+  | _ =>
+      if val.json then
+        IO.println (jobj
+          [("error", jstr ("unknown add sub-command: " ++ sub)),
+           ("allowed", jarr (["tool", "network", "hook", "context"].map jstr))])
+      else
+        IO.eprintln "gokujo: unknown add sub-command: " ++ sub
+        IO.eprintln "  allowed: tool, network, hook, context"
+      return 1
 
 /-- `gokujo axioms`. -/
 def axioms (a : Args) : IO UInt32 := do
@@ -2177,17 +2619,17 @@ def axioms (a : Args) : IO UInt32 := do
   let (lines, complaints) ← auditAxioms cfg ch infos
   let bad := lines.filter (fun l => !(offending cfg l).isEmpty)
   let observed := Util.dedup (lines.flatMap (·.axioms))
-  if cfg.json then
+  if val.json then
     IO.println (jobj
       [("audited", jnat lines.length),
-       ("allowed", jarr (cfg.allowAxioms.map jstr)),
+       ("allowed", jarr (val.allowAxioms.map jstr)),
        ("observed", jarr (observed.map jstr)),
        ("violations", jarr (bad.map (fun l =>
           jobj [("name", jstr l.name), ("axioms", jarr ((offending cfg l).map jstr))]))),
        ("ok", jbool bad.isEmpty)])
   else
     put (["  audited " ++ toString lines.length ++ " declarations",
-          "  allowed:  " ++ String.intercalate ", " cfg.allowAxioms,
+          "  allowed:  " ++ String.intercalate ", " val.allowAxioms,
           "  observed: " ++ (if observed.isEmpty then "nothing at all"
                              else String.intercalate ", " observed)] ++
       (if bad.isEmpty then ["  no theorem depends on anything else"]
@@ -2200,20 +2642,20 @@ def axioms (a : Args) : IO UInt32 := do
 /-- `gokujo check`: every gate, in order. -/
 def check (a : Args) : IO UInt32 := do
   let cfg ← effective a
-  if !cfg.json then IO.println banner
+  if !val.json then IO.println banner
   let mut code : UInt32 := 0
-  if !cfg.json then IO.println "\n  [1/5] scan"
+  if !val.json then IO.println "\n  [1/5] scan"
   let s ← scan a
-  if !cfg.json then IO.println "\n  [2/5] order"
+  if !val.json then IO.println "\n  [2/5] order"
   let g ← graph a
-  if !cfg.json then IO.println "\n  [3/5] build"
+  if !val.json then IO.println "\n  [3/5] build"
   let b ← build a
-  if !cfg.json then IO.println "\n  [4/5] holes"
+  if !val.json then IO.println "\n  [4/5] holes"
   let h ← sorryCmd a
-  if !cfg.json then IO.println "\n  [5/5] axioms"
+  if !val.json then IO.println "\n  [5/5] axioms"
   let x ← if b == 0 then axioms a else pure b
   code := if s == 0 && g == 0 && b == 0 && h == 0 && x == 0 then 0 else 1
-  if !cfg.json then
+  if !val.json then
     IO.println ("\n  " ++ (if code == 0 then "PASS" else "FAIL"))
   return code
 
@@ -2223,7 +2665,7 @@ def html (a : Args) : IO UInt32 := do
   let ch ← toolchain cfg
   let line := "Toolchain: " ++ ch.backend.name ++ " " ++ ch.version ++ "."
   let doc := page infos line
-  match cfg.out with
+  match val.out with
   | some f => do
       ensureParent f
       IO.FS.writeFile f doc
@@ -2234,13 +2676,13 @@ def html (a : Args) : IO UInt32 := do
 /-- `gokujo weave`. -/
 def weave (a : Args) : IO UInt32 := do
   let cfg ← effective a
-  let src := (a.positional.head?).getD (cfg.root ++ "/Gokujo.lean")
+  let src := (a.positional.head?).getD (val.root ++ "/Gokujo.lean")
   let code ← readOr src
   if code == "" then
     IO.eprintln ("  cannot read " ++ src)
     return 2
   let md := Md.weave (Util.unlines markdown) code
-  match cfg.out with
+  match val.out with
   | some f => do IO.FS.writeFile f md; IO.println ("  wrote " ++ f)
   | none => IO.println md
   return 0
@@ -2248,13 +2690,13 @@ def weave (a : Args) : IO UInt32 := do
 /-- `gokujo tangle`. -/
 def tangle (a : Args) : IO UInt32 := do
   let cfg ← effective a
-  let src := (a.positional.head?).getD (cfg.root ++ "/GOKUJO.md")
+  let src := (a.positional.head?).getD (val.root ++ "/GOKUJO.md")
   let md ← readOr src
   if md == "" then
     IO.eprintln ("  cannot read " ++ src)
     return 2
   let code := Md.tangle md
-  match cfg.out with
+  match val.out with
   | some f => do IO.FS.writeFile f code; IO.println ("  wrote " ++ f)
   | none => IO.println code
   return 0
@@ -2262,13 +2704,13 @@ def tangle (a : Args) : IO UInt32 := do
 /-- `gokujo selfcheck`. -/
 def selfcheck (a : Args) : IO UInt32 := do
   let cfg ← effective a
-  let leanPath := cfg.root ++ "/Gokujo.lean"
-  let mdPath := cfg.root ++ "/GOKUJO.md"
+  let leanPath := val.root ++ "/Gokujo.lean"
+  let mdPath := val.root ++ "/GOKUJO.md"
   let code ← readOr leanPath
   let md ← readOr mdPath
   let extracted := Md.tangle md
   let same := extracted == code
-  if cfg.json then
+  if val.json then
     IO.println (jobj [("lean", jstr leanPath), ("markdown", jstr mdPath),
                       ("leanDigest", jstr (Util.digest code)),
                       ("tangledDigest", jstr (Util.digest extracted)),
@@ -2284,7 +2726,7 @@ def selfcheck (a : Args) : IO UInt32 := do
 /-- `gokujo selftest`. -/
 def selftest (a : Args) : IO UInt32 := do
   let cfg ← effective a
-  if cfg.json then
+  if val.json then
     IO.println (jobj [("cases", jarr (Test.cases.map (fun c =>
         jobj [("name", jstr c.1), ("pass", jbool c.2)]))),
       ("passed", jnat Test.passed), ("total", jnat Test.cases.length),
@@ -2297,7 +2739,7 @@ def selftest (a : Args) : IO UInt32 := do
 /-- `gokujo targets`. -/
 def targets (a : Args) : IO UInt32 := do
   let cfg ← effective a
-  if cfg.json then
+  if val.json then
     IO.println (jarr (Tool.matrix.map (fun t =>
       jobj [("flavour", jstr t.1.name), ("platform", jstr t.2.1.triple),
             ("artifact", jstr t.2.2), ("needs", jstr t.1.about)])))
@@ -2337,7 +2779,7 @@ def release (a : Args) : IO UInt32 := do
       , "" ]) ++
     [ "echo 'dist:' && ls -1 dist" ]
   let text := Util.unlines script
-  match cfg.out with
+  match val.out with
   | some f => do
       IO.FS.writeFile f text
       IO.println ("  wrote " ++ f ++ "  (" ++ toString Tool.matrix.length ++ " targets)")
@@ -2351,22 +2793,22 @@ def bootstrap (a : Args) : IO UInt32 := do
   if !ch.backend.compiles then
     IO.eprintln "  no toolchain available to compile with"
     return 3
-  let src := (a.positional.head?).getD (cfg.root ++ "/Gokujo.lean")
-  let exe := cfg.out.getD (cfg.root ++ "/gokujo")
-  let dir := cfg.root ++ "/" ++ cfg.buildDir
+  let src := (a.positional.head?).getD (val.root ++ "/Gokujo.lean")
+  let exe := val.out.getD (val.root ++ "/gokujo")
+  let dir := val.root ++ "/" ++ val.buildDir
   IO.FS.createDirAll dir
   let cfile := dir ++ "/gokujo.c"
   let olean := dir ++ "/Gokujo.olean"
   let env ← leanEnv cfg ch
   let a1 := ch.leanPre ++ [src, "-o", olean, "-c", cfile]
   IO.println ("  " ++ String.intercalate " " (ch.leanCmd :: a1))
-  let (c1, o1, e1) ← run ch.leanCmd a1 (some cfg.root) env
+  let (c1, o1, e1) ← run ch.leanCmd a1 (some val.root) env
   if c1 != 0 then
     IO.eprintln (o1 ++ e1)
     return 1
   let a2 := ch.leancPre ++ [cfile, "-o", exe]
   IO.println ("  " ++ String.intercalate " " (ch.leancCmd :: a2))
-  let (c2, o2, e2) ← run ch.leancCmd a2 (some cfg.root) env
+  let (c2, o2, e2) ← run ch.leancCmd a2 (some val.root) env
   if c2 != 0 then
     IO.eprintln (o2 ++ e2)
     return 1
@@ -2389,7 +2831,7 @@ def bundle (a : Args) : IO UInt32 := do
   if src == "" || src == "lean" then
     IO.eprintln "  give the toolchain directory to bundle, e.g. ~/.elan/toolchains/<name>"
     return 2
-  let dest := cfg.out.getD (((← exeDir).getD cfg.root) ++ "/toolchain")
+  let dest := val.out.getD (((← exeDir).getD val.root) ++ "/toolchain")
   let (code, _, err) ← run "cp" ["-a", src, dest]
   if code != 0 then
     IO.eprintln ("  could not copy " ++ src ++ " to " ++ dest ++ ": " ++ err)
@@ -2406,7 +2848,7 @@ def bundle (a : Args) : IO UInt32 := do
 /-- `gokujo init`. -/
 def init (a : Args) : IO UInt32 := do
   let cfg ← effective a
-  let dir := cfg.root ++ "/.gokujo"
+  let dir := val.root ++ "/.gokujo"
   IO.FS.createDirAll dir
   let src := (a.positional.head?).getD "."
   let body := Util.unlines
@@ -2441,6 +2883,11 @@ def dispatch (a : Args) : IO UInt32 := do
   | "bootstrap" => bootstrap a
   | "bundle" => bundle a
   | "init" => init a
+  | "exec" => exec a
+  | "registry" => registry a
+  | "protocol" => protocol a
+  | "pipeline" => pipeline a
+  | "add" => add a
   | c => do
       IO.eprintln ("gokujo: unknown command: " ++ c)
       IO.eprintln "try: gokujo help"

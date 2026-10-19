@@ -9,7 +9,7 @@ defaultTargets = ["Minimal"]
 
 [[lean_lib]]
 name = "Minimal"
-roots = ["Agent", "APICapabilities", "CommandExecution", "CreditUsage", "ExecutionTrace", "ToolProvenance", "Twin", "FreebuffTwin", "Main", "ProxyReport"]
+roots = ["Agent", "APICapabilities", "CommandExecution", "CreditUsage", "ExecutionTrace", "ToolProvenance", "Twin", "FreebuffTwin", "Main", "ProxyReport", "Gokujo.lean"]
 
 [[lean_lib]]
 name = "Minimal.Proxy"
