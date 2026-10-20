@@ -1,0 +1,12 @@
+1. the gokujo idea is that we can do all the work we need to do via lean.
+   typesafe interfaces for :
+   1. nix
+   2. git
+   3. github
+   4. huggingface
+   5. cloudflare
+   6. dns
+   7. lean4/lake
+
+      all via the cli. so wrapping and using existing code to start in typesafe intefafaces.
+      then using gui2proof to prove things about them.
