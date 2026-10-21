@@ -1,0 +1,71 @@
+name: Solve Git Twin
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/solve_git_twin.mjs'
+      - '.github/workflows/solve_git_twin.yml'
+      - 'minimal/**'
+      - 'tools/gokujo/**'
+      - '.github/workflows/lean.yml'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/solve_git_twin.mjs'
+      - '.github/workflows/solve_git_twin.yml'
+      - 'minimal/**'
+      - 'tools/gokujo/**'
+      - '.github/workflows/lean.yml'
+  schedule:
+    - cron: '0 3 * * *'  # daily at 03:00 UTC — keep the twin report fresh
+
+jobs:
+  solve-git-twin:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: jmikedupont2/lean-worker
+      BRANCH: main
+      RELAY: https://kant-zk-relay.jmikedupont2.workers.dev
+      RELAY_ROOM: agent-zoo-public
+      SALT: twin-proof-wave-vi-xii-2026-09-17-mike
+      NODE_ID: github-actions-${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify the Lean twin (the same gate lean.yml runs)
+        run: |
+          if command -v gokujo > /dev/null 2>&1; then
+            GOKUJO="$(realpath -s "$(command -v gokujo)")"
+          else
+            GOKUJO="$GITHUB_WORKSPACE/minimal/gokujo-temp"
+            { cat "$GITHUB_WORKSPACE/minimal/Gokujo.lean"
+              echo 'def main (argv : List String) : IO UInt32 := gokujoMain argv'; } > "$GITHUB_WORKSPACE/minimal/gokujo-main.lean"
+            cd "$GITHUB_WORKSPACE/minimal"
+            lean -c gokujo-main.c gokujo-main.lean
+            leanc gokujo-main.c -o gokujo-temp
+            GOKUJO="$PWD/gokujo-temp"
+          fi
+          cd "$GITHUB_WORKSPACE/minimal"
+          "$GOKUJO" check \
+            Agent.lean APICapabilities.lean CommandExecution.lean CreditUsage.lean \
+            ExecutionTrace.lean ToolProvenance.lean Twin.lean Main.lean ProxyReport.lean \
+            Proxy Protocol \
+            --backend system --json > gokujo-report.json || status=$?
+          cat gokujo-report.json
+          exit ${status:-0}
+
+      - name: Solve the git twin end to end
+        run: |
+          node .github/workflows/solve_git_twin.mjs
+
+      - name: Publish the twin report
+        if: always()
+        run: |
+          node -e "
+          const p = require('./.github/workflows/solve_git_twin.mjs');
+          p.postToRelay({ kind: 'solve_git_twin_status', status: 'published', run: ${{ github.run_id }}, node: process.env.NODE_ID, ts: Date.now() });
+          "

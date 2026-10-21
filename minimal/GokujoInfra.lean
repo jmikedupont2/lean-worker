@@ -213,4 +213,77 @@ def pipelightYml : String :=
   "  - name: stage3-gokujo\n" +
   "    description: Single-file verification gate\n" +
   "    duration: ~10s\n"
+
+/-- The native-gokujo builder GitHub Action. Builds gokujo once, caches the
+binary, and reuses it for verification + `solve_git_twin` instead of rebuilding
+every run. -/
+def builderGithubWorkflow : String :=
+  "name: Lean 4 Builder + git_twin\n" +
+  "on:\n" +
+  "  push:\n" +
+  "    branches: [ main ]\n" +
+  "  pull_request:\n" +
+  "    branches: [ main ]\n" +
+  "  schedule:\n" +
+  "    - cron: '0 3 * * *'  # daily at 03:00 UTC — keep the twin report fresh\n" +
+  "\n" +
+  "jobs:\n" +
+  "  build-gokujo:\n" +
+  "    runs-on: ubuntu-latest\n" +
+  "    strategy:\n" +
+  "      matrix:\n" +
+  "        backend: [bundled, system, elan, lake, nix]\n" +
+  "    steps:\n" +
+  "      - uses: actions/checkout@v4\n" +
+  "        with:\n" +
+  "          fetch-depth: 0\n" +
+  "\n" +
+  "      - name: Setup Nix (toolchain)\n" +
+  "        if: matrix.backend == 'nix'\n" +
+  "        uses: cachix/install-nix-action@v20\n" +
+  "        with:\n" +
+  "          extra_nix_config: |\n" +
+  "            experimental-features = nix-command flakes\n" +
+  "            substituters = https://cache.nixos.org https://nix-community.cachix.org\n" +
+  "            trusted-public-keys = cache.nixos.org-1:aNJVHp2ql7migYbNxr0vczfzuVoCYuzzbJVGNCDtU6g= nix-community.cachix.org-1:IT9/7Hwk9xU/HRhDHbhlZW6Nw3NUBmEvfpL6wO3jVNo=\n" +
+  "\n" +
+  "      - name: Install Lean 4 toolchain\n" +
+  "        if: matrix.backend != 'nix'\n" +
+  "        run: |\n" +
+  "          nix profile install nixpkgs#lean4\n" +
+  "          nix profile install nixpkgs#leanc\n" +
+  "\n" +
+  "      - name: Cache native gokujo build\n" +
+  "        id: gokujo-cache\n" +
+  "        uses: actions/cache@v4\n" +
+  "        with:\n" +
+  "          path: minimal/.gokujo\n" +
+  "          key: ${{ runner.os }}-gokujo-${{ matrix.backend }}-${{ hashFiles('minimal/Gokujo.lean', 'minimal/GokujoMain.lean', 'minimal/Builder.lean') }}\n" +
+  "          restore-keys: |\n" +
+  "            ${{ runner.os }}-gokujo-${{ matrix.backend }}-\n" +
+  "            ${{ runner.os }}-gokujo-\n" +
+  "\n" +
+  "      - name: Build native gokujo\n" +
+  "        run: |\n" +
+  "          make -C minimal builder\n" +
+  "        env:\n" +
+  "          GOKUJO_BACKEND: ${{ matrix.backend }}\n" +
+  "\n" +
+  "      - name: Run git_twin (solve)\n" +
+  "        run: |\n" +
+  "          node .github/workflows/solve_git_twin.mjs\n" +
+  "        env:\n" +
+  "          GH_TOKEN: \${{ secrets.GITHUB_TOKEN }}\n" +
+  "          GH_REPO: jmikedupont2/lean-worker\n" +
+  "          BRANCH: main\n" +
+  "          RELAY: https://kant-zk-relay.jmikedupont2.workers.dev\n" +
+  "          RELAY_ROOM: agent-zoo-public\n" +
+  "          SALT: twin-proof-wave-vi-xii-2026-09-17-mike\n" +
+  "          NODE_ID: github-actions-\${{ github.run_id }}\n" +
+  "\n" +
+  "      - name: Publish twin status\n" +
+  "        if: always()\n" +
+  "        run: |\n" +
+  "          node -e \"import('./.github/workflows/solve_git_twin.mjs').then(async m => { await m.postToRelay({ kind: 'solve_git_twin_status', status: 'published', run: \${{ github.run_id }}, node: process.env.NODE_ID, ts: Date.now() }) });\"\n"
+
 end Infra

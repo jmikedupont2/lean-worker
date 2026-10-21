@@ -1,0 +1,57 @@
+1. the gokujo idea is that we can do all the work we need to do via lean.
+   typesafe interfaces for :
+   1. nix
+      ubuntu
+      debian
+      linux
+      posix
+      unix
+      everything is a file, all code is a driver in a user space hurd like microkernel
+   2. git
+      we have ~/gitplan.org and 
+   3. github
+      we have many git repos in ~/git/<github.com>/<owner>/<user>
+      see ~/tools/onboard*
+   4. huggingface
+      we want to mirror and model the huggingface api 
+   5. cloudflare
+   6. dns
+   7. lean4/lake
+   8. ~/projects/arist aristotle integration
+      8.1 we have many proofs in aristotle for all those things
+we want to wrap all external apis with our own identical secure versions of the apis.
+
+      all via the cli. so wrapping and using existing code to start in typesafe intefafaces.
+      then using gui2proof to prove things about them.
+we will deploy an
+1. cli tool binary in path that deploys 
+2. systemd service that deploys
+   see ~/projects/system-manager
+3. https api hosted on localhost solana.solfunmeme.com that deploys
+      see ~/projects/nginx
+      
+4. worker on cloudflare that deploys
+   
+5. other cloud resources needed.
+
+   we can then prove things about those things.
+
+   each process we model in a special lean type for the later lean4 based os.
+   we have hundreds of projects.
+
+see hurd of proovers
+/mnt/data1/aristotle-builds/dasl-corpus-merged/RequestProject/94a7c26c-945a-4cbf-b7b3-bfa3ea5e6693_HurdOfProvers.lean
+/mnt/data1/aristotle-git-versions/94a7c26c-945a-4cbf-b7b3-bfa3ea5e6693/canonical-flakes_aristotle/aeb33075-1091-4ecc-9e00-7a6ae37eeed4/RequestProject/HurdOfProvers/HurdOfProvers.lean
+we have many copies of this file we need to dedup
+
+
+we need to get the index tantivy working, ~/DOCS/search
+and the ipdl shmem server
+
+
+we will use the ~/dotagents/tasks form for all projects and create tasks for all things to to. these tasks will run via the task runner.
+it will chose the best model and resouces for each one. this will tie into task enrichment and diagonalization.
+
+we create python/js/bash/awk/sed scripts wrapped in lean to  automate things for us.
+
+the task enrichment finds ai chat logs and git commits and connects them.
