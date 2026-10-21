@@ -43,12 +43,20 @@ structure Cfg where
   expectedName : Name
   allowedAxioms : List Name
 
+/-- `String.toName` builds a single atom; split dotted names properly.
+    (TEST_ONLY: no handling of escaped dots or numeric components.) -/
+def parseName (s : String) : Name :=
+  s.splitOn "." |>.foldl (fun n p => Name.str n p) Name.anonymous
+
 def verdict (r : Reason) (cfg : Cfg) (axioms : List Name := [])
     (declared : List Name := []) (extra : String := "") : IO Unit := do
-  let q (n : Name) := s!"\"{n}\""
+  let q (n : Name) := "\"" ++ n.toString ++ "\""
   let axStr := String.intercalate ", " (axioms.map q)
   let dclStr := String.intercalate ", " (declared.map q)
-  IO.println s!"{\"schema\":\"zos.verify.v1-testonly\",\"jobModule\":\"{cfg.module}\",\"decl\":\"{cfg.decl}\",\"reasonCode\":\"{r.code}\",\"axioms\":[{axStr}],\"declaredAxiomsInSubmission\":[{dclStr}]{extra}}"
+  IO.println ("{\"schema\":\"zos.verify.v1-testonly\",\"jobModule\":\""
+    ++ cfg.module.toString ++ "\",\"decl\":\"" ++ cfg.decl.toString
+    ++ "\",\"reasonCode\":\"" ++ r.code ++ "\",\"axioms\":[" ++ axStr
+    ++ "],\"declaredAxiomsInSubmission\":[" ++ dclStr ++ "]" ++ extra ++ "}")
 
 /-- All constants defined in `mod` whose ConstantInfo is an axiomInfo. -/
 def declaredAxioms (env : Environment) (mod : Name) : List Name := Id.run do
@@ -61,34 +69,44 @@ def declaredAxioms (env : Environment) (mod : Name) : List Name := Id.run do
 
 /-- The full decision procedure. Exit 0 accepted / 1 rejected / 2 checker error. -/
 def run (cfg : Cfg) : IO UInt32 := do
-  initSearchPath
-  let env ←
+  initSearchPath (← findSysroot)
+  let env? ←
     try
-      importModules
-        #[{ module := cfg.refModule, runtimeOnly := false },
-          { module := cfg.module, runtimeOnly := false }]
-        (opts := {}) (trustLevel := 0)
+      some <$> importModules
+        #[{ module := cfg.refModule }, { module := cfg.module }] {} (0 : UInt32)
     catch e =>
-      verdict .importFailed cfg (extra := s!",\"detail\":\"{e}\"")
-      return 1
-  let some expectedInfo := env.find? cfg.expectedName
+      verdict .importFailed cfg (extra := ",\"detail\":\"" ++ toString e ++ "\"")
+      pure none
+  let some env := env? | return 1
+    -- Direct `lean file.lean -o` compiles put constants at the ROOT namespace
+    -- (lake builds namespace them).  Accept either shape; the module-of check
+    -- below stays sound in both because it compares module indices.
+  let expectedInfo? := env.find? cfg.expectedName
+    <|> env.find? (cfg.refModule ++ cfg.expectedName)
+  let some expectedInfo := expectedInfo?
     | do
         verdict .checkerError cfg (extra := ",\"detail\":\"reference __expected missing\"")
         return 2
-  let some c := env.find? cfg.decl
+  let .defnInfo ed := expectedInfo
+    | do
+        verdict .checkerError cfg (extra := ",\"detail\":\"__expected must be a def : Prop\"")
+        return 2
+  let some modIdx := env.header.moduleNames.findIdx? (· == cfg.module)
+    | do verdict .targetMissing cfg; return 1
+  -- First candidate that is actually DEFINED in the submission module.
+  let found? := [cfg.module ++ cfg.decl, cfg.decl].find? fun n =>
+    (env.getModuleIdxFor? n) == some modIdx
+  let some c := found? >>= env.find?
     | do verdict .targetMissing cfg; return 1
   let .thmInfo thm := c
     | do verdict .targetNotTheorem cfg; return 1
-  -- The declaration must be defined in the submission module, not imported.
-  if env.getModuleFor? cfg.decl != some cfg.module then
-    verdict .targetMissing cfg (extra := ",\"detail\":\"decl not defined in submission module\"")
-    return 1
   -- Level parameters and type must match the reference structurally.
-  if c.levelParams != expectedInfo.levelParams || thm.type != expectedInfo.type then
+  if c.levelParams != ed.levelParams || thm.type != ed.value then
     verdict .statementMismatch cfg; return 1
   -- Axioms from the environment (no lexer involved).
-  let (axioms, _) ← (Lean.collectAxioms cfg.decl).toIO
+  let (axioms, _) ← (Lean.collectAxioms c.name : CoreM (Array Name)).toIO
     { fileName := "<jobverifier>", fileMap := default } { env := env }
+  let axioms := axioms.toList
   if axioms.contains `sorryAx then
     verdict .sorryAxiom cfg (axioms := axioms); return 1
   let bad := axioms.filter (· ∉ cfg.allowedAxioms)
@@ -103,8 +121,8 @@ def run (cfg : Cfg) : IO UInt32 := do
 
 def parseArgs : List String → Option Cfg
   | ["--module", m, "--decl", d, "--ref", r, "--expected", e] =>
-    some { module := m.toName, decl := d.toName, refModule := r.toName,
-           expectedName := e.toName,
+    some { module := parseName m, decl := parseName d, refModule := parseName r,
+           expectedName := parseName e,
            allowedAxioms := [`propext, `Classical.choice, `Quot.sound] }
   | _ => none
 
