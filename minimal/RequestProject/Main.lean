@@ -16,8 +16,9 @@ This module is the single entry point of the merged project.  It pulls together
   `Proxy.Interop`, `Proxy.Example`, `Proxy.Export`).
 -/
 
-import Mathlib
-
+-- `import Mathlib` removed 2026-10-18: this project is no-mathlib by policy
+-- (minimal/fast-lakefile.toml: "NO [[require]] = no mathlib, no network").
+-- Every module it imports builds on Lean core alone.
 import RequestProject.Agent
 import RequestProject.APICapabilities
 import RequestProject.CommandExecution
@@ -40,11 +41,10 @@ import RequestProject.Proxy.Interop
 import RequestProject.Proxy.Example
 import RequestProject.Proxy.Export
 
-open scoped BigOperators
-open scoped Real
+-- `open scoped BigOperators/Real/Pointwise` removed with Mathlib (scoped
+-- instances live in Mathlib); Nat and Classical are core and stay.
 open scoped Nat
 open scoped Classical
-open scoped Pointwise
 
 set_option maxHeartbeats 8000000
 set_option maxRecDepth 4000

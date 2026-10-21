@@ -1,6 +1,6 @@
 # Task: Full Project Testing with Fixed Binary
 
-**Status:** done (2026-10-18, bounded — see note on the original corpus)
+**Status:** done (2026-10-18) — full-dir check now unqualified PASS (see 2026-10-18 full-dir section)
 **Project:** lean-worker
 **Priority:** P2
 
@@ -30,7 +30,9 @@ nix build .#gokujo
 
 ## Expected Results
 - Scan RequestProject: Exit code 0, processes all declarations ✓ (measured: 11 files, 286 declarations, 0 with holes)
-- Check RequestProject: Exit code 0, Result: PASS ✓ on the 7 buildable modules (PASS, 0 holes, axioms audited). Full-dir check fails only on the 3 source-level gaps recorded in `tasks/rebuild-fixed-binary/SYSTEM.md` (Mathlib import; missing `RequestProject.Proxy` / `RequestProject.PluginContexts` subtrees).
+- Check RequestProject: Exit code 0, Result: PASS ✓ — full-dir (all 73 modules) passes as of
+  the fix session recorded in `tasks/fix-requestproject-full-check/`; the earlier 3 source-level gaps
+  (Mathlib import; missing `RequestProject.Proxy` / `RequestProject.PluginContexts` subtrees) are closed.
 - No "Stack overflow detected. Aborting." messages ✓ on every corpus run below
 
 ## Receipts (2026-10-18, old pre-fix `minimal/gokujo` vs rebuilt `result/bin/gokujo`)
