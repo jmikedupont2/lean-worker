@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 # job-verifier.sh — TEST_ONLY driver for the PR #25 job-verifier checker.
 #
-# Usage: job-verifier.sh <submission.lean> <module> <decl> <refModule> <expectedName>
+# Usage: job-verifier.sh <submission.lean> <module> <decl> [<refModule> <expectedName>]
+#   5-arg form: full mode — statement must match the reference __expected.
+#   3-arg form: refless mode — environment-based checks only (decl
+#     presence/kind, sorry, axiom policy, declared axioms); no statement match.
 #
 # Stage → build (pinned toolchain via lean-toolchain) → CHECK (environment-based).
 # Exit: 0 accepted / 1 rejected / 2 driver or checker error.
@@ -13,7 +16,7 @@
 #     this belongs in the job spec validation, not here.
 set -euo pipefail
 
-SRC="$1"; MODULE="$2"; DECL="$3"; REF="$4"; EXPECTED="$5"
+SRC="$1"; MODULE="$2"; DECL="$3"; REF="${4:-}"; EXPECTED="${5:-}"
 
 if [[ "$SRC" != *.lean ]]; then
   echo "{\"schema\":\"zos.verify.v1-testonly\",\"reasonCode\":\"NOT_LEAN_SOURCE\",\"detail\":\"$SRC\"}"
@@ -26,6 +29,11 @@ fi
 
 HERE="$(cd "$(dirname "$0")/.." && pwd)"       # minimal/
 JV="$HERE/JobVerifier"
+
+# Self-provision the checker binary if missing (fresh checkout).
+if [[ ! -x "$JV/jobverifier" ]]; then
+  (cd "$JV" && lean Check.lean -c Check.c -o Check.olean && leanc -o jobverifier Check.c) >&2
+fi
 STAGE="$(mktemp -d /tmp/jobverifier.XXXXXX)"
 trap 'rm -rf "$STAGE"' EXIT
 
@@ -42,11 +50,13 @@ cp "$SRC" "$STAGE/$MODULE.lean"
 # specialize against it.
 (cd "$STAGE" && lean "$MODULE.lean" -o "$MODULE.olean") >&2
 
-# Build the reference module beside it (checker-only input).
-REF_SRC="$(dirname "$SRC")/Ref.lean"
-[[ -f "$REF_SRC" ]] || REF_SRC="$HERE/JobVerifier/test/cases/$(basename "$(dirname "$SRC")")/Ref.lean"
-cp "$REF_SRC" "$STAGE/$REF.lean"
-(cd "$STAGE" && lean "$REF.lean" -o "$REF.olean") >&2
+if [[ -n "$REF" ]]; then
+  # Build the reference module beside it (checker-only input).
+  REF_SRC="$(dirname "$SRC")/Ref.lean"
+  [[ -f "$REF_SRC" ]] || REF_SRC="$HERE/JobVerifier/test/cases/$(basename "$(dirname "$SRC")")/Ref.lean"
+  cp "$REF_SRC" "$STAGE/$REF.lean"
+  (cd "$STAGE" && lean "$REF.lean" -o "$REF.olean") >&2
+fi
 
 export LEAN_PATH="$STAGE"
 # Pin the checker's sysroot to the toolchain resolved from minimal/
@@ -54,4 +64,8 @@ export LEAN_PATH="$STAGE"
 # follows elan's *invoking-cwd* default (e.g. 4.35.0 from /tmp) and the
 # Init oleans come back "incompatible header".
 export LEAN_SYSROOT="$(cd "$HERE" && lean --print-prefix)"
-exec "$JV/jobverifier" --module "$MODULE" --decl "$DECL" --ref "$REF" --expected "$EXPECTED"
+if [[ -n "$REF" ]]; then
+  exec "$JV/jobverifier" --module "$MODULE" --decl "$DECL" --ref "$REF" --expected "$EXPECTED"
+else
+  exec "$JV/jobverifier" --module "$MODULE" --decl "$DECL"
+fi

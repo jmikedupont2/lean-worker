@@ -39,8 +39,8 @@ def Reason.code : Reason → String
 structure Cfg where
   module : Name
   decl : Name
-  refModule : Name
-  expectedName : Name
+  refModule : Option Name
+  expectedName : Option Name
   allowedAxioms : List Name
 
 /-- `String.toName` builds a single atom; split dotted names properly.
@@ -67,30 +67,44 @@ def declaredAxioms (env : Environment) (mod : Name) : List Name := Id.run do
     | some (.axiomInfo _) => n :: acc
     | _ => acc
 
+/-- Statement match against the (optional) reference.  `none` = skipped
+    (refless mode) or passed — continue; `some code` = terminal verdict,
+    already printed. -/
+def checkStatement (cfg : Cfg) (env : Environment)
+    (levelParams : List Name) (thmType : Expr) : IO (Option UInt32) := do
+  let some expectedName := cfg.expectedName
+    | return none -- refless mode: no reference statement available
+  let refModule := cfg.refModule.getD Name.anonymous
+  let expectedInfo? := env.find? expectedName
+    <|> env.find? (refModule ++ expectedName)
+  match expectedInfo? with
+  | none =>
+      verdict .checkerError cfg (extra := ",\"detail\":\"reference __expected missing\"")
+      return some 2
+  | some (.defnInfo ed) =>
+      if levelParams != ed.levelParams || thmType != ed.value then
+        verdict .statementMismatch cfg
+        return some 1
+      return none
+  | some _ =>
+      verdict .checkerError cfg (extra := ",\"detail\":\"__expected must be a def : Prop\"")
+      return some 2
+
 /-- The full decision procedure. Exit 0 accepted / 1 rejected / 2 checker error. -/
 def run (cfg : Cfg) : IO UInt32 := do
   initSearchPath (← findSysroot)
+  let refImports : Array Import := cfg.refModule.toArray.map fun m => ({ module := m } : Import)
   let env? ←
     try
       some <$> importModules
-        #[{ module := cfg.refModule }, { module := cfg.module }] {} (0 : UInt32)
+        (refImports.push { module := cfg.module }) {} (0 : UInt32)
     catch e =>
       verdict .importFailed cfg (extra := ",\"detail\":\"" ++ toString e ++ "\"")
       pure none
   let some env := env? | return 1
-    -- Direct `lean file.lean -o` compiles put constants at the ROOT namespace
-    -- (lake builds namespace them).  Accept either shape; the module-of check
-    -- below stays sound in both because it compares module indices.
-  let expectedInfo? := env.find? cfg.expectedName
-    <|> env.find? (cfg.refModule ++ cfg.expectedName)
-  let some expectedInfo := expectedInfo?
-    | do
-        verdict .checkerError cfg (extra := ",\"detail\":\"reference __expected missing\"")
-        return 2
-  let .defnInfo ed := expectedInfo
-    | do
-        verdict .checkerError cfg (extra := ",\"detail\":\"__expected must be a def : Prop\"")
-        return 2
+  -- Direct `lean file.lean -o` compiles put constants at the ROOT namespace
+  -- (lake builds namespace them).  Accept either shape; the module-of check
+  -- below stays sound in both because it compares module indices.
   let some modIdx := env.header.moduleNames.findIdx? (· == cfg.module)
     | do verdict .targetMissing cfg; return 1
   -- First candidate that is actually DEFINED in the submission module.
@@ -100,9 +114,12 @@ def run (cfg : Cfg) : IO UInt32 := do
     | do verdict .targetMissing cfg; return 1
   let .thmInfo thm := c
     | do verdict .targetNotTheorem cfg; return 1
-  -- Level parameters and type must match the reference structurally.
-  if c.levelParams != ed.levelParams || thm.type != ed.value then
-    verdict .statementMismatch cfg; return 1
+  -- Level parameters and type must match the reference structurally
+  -- (skipped in refless mode — see checkStatement).
+  let stmtCode? ← checkStatement cfg env c.levelParams thm.type
+  match stmtCode? with
+  | some code => return code
+  | none => pure ()
   -- Axioms from the environment (no lexer involved).
   let (axioms, _) ← (Lean.collectAxioms c.name : CoreM (Array Name)).toIO
     { fileName := "<jobverifier>", fileMap := default } { env := env }
@@ -116,13 +133,22 @@ def run (cfg : Cfg) : IO UInt32 := do
   let declared := declaredAxioms env cfg.module
   if !declared.isEmpty then
     verdict .axiomDeclared cfg (declared := declared); return 1
-  verdict .ok cfg (axioms := axioms)
+  let reflessExtra := if cfg.expectedName.isNone then ",\"refless\":true" else ""
+  verdict .ok cfg (axioms := axioms) (extra := reflessExtra)
   return 0
 
 def parseArgs : List String → Option Cfg
   | ["--module", m, "--decl", d, "--ref", r, "--expected", e] =>
-    some { module := parseName m, decl := parseName d, refModule := parseName r,
-           expectedName := parseName e,
+    some { module := parseName m, decl := parseName d,
+           refModule := some (parseName r), expectedName := some (parseName e),
+           allowedAxioms := [`propext, `Classical.choice, `Quot.sound] }
+  | ["--module", m, "--decl", d] =>
+    -- Refless mode: no reference statement available (e.g. a bone-worker
+    -- offer that carries proveGoal coordinates but no signed expected
+    -- statement).  Environment-based checks only: decl presence/kind,
+    -- sorry, axiom policy, declared axioms.
+    some { module := parseName m, decl := parseName d,
+           refModule := none, expectedName := none,
            allowedAxioms := [`propext, `Classical.choice, `Quot.sound] }
   | _ => none
 
@@ -131,5 +157,6 @@ def main (args : List String) : IO UInt32 := do
   | some cfg => run cfg
   | none =>
     IO.eprintln "usage: jobverifier --module M --decl D --ref R --expected E"
+    IO.eprintln "       jobverifier --module M --decl D   (refless: no statement match)"
     IO.eprintln "  LEAN_PATH must contain the pinned deps and the staged submission olean."
     return 2
