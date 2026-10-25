@@ -460,17 +460,17 @@ def registerAdapter
 -- ============================================
 
 -- Theorem: ToolMessageRole is decidable
-theorem tool_message_role_decidable :   (r1 r2 : ToolMessageRole), Decidable (r1 = r2) := by
+theorem tool_message_role_decidable : ∀ (r1 r2 : ToolMessageRole), Decidable (r1 = r2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ToolChoiceType is decidable
-theorem tool_choice_type_decidable :   (t1 t2 : ToolChoiceType), Decidable (t1 = t2) := by
+theorem tool_choice_type_decidable : ∀ (t1 t2 : ToolChoiceType), Decidable (t1 = t2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ToolCallingCapability is decidable
-theorem tool_calling_capability_decidable :   (c1 c2 : ToolCallingCapability), Decidable (c1 = c2) := by
+theorem tool_calling_capability_decidable : ∀ (c1 c2 : ToolCallingCapability), Decidable (c1 = c2) := by
   intro _ _
   infer_instance
 

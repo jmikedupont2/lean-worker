@@ -35,7 +35,9 @@ inductive ProtocolName
   | SelfRefine
   | Reflexion
   | ConstitutionalAI
-  | Custom of String
+  | LeanCtx
+  | AgentTelemetry
+  | Custom (of : String)
   deriving Repr, DecidableEq
 
 -- Protocol Version
@@ -56,7 +58,7 @@ inductive ProtocolCapability
   | Planning
   | Reflection
   | MultiAgentCoordination
-  | Custom of String
+  | Custom (of : String)
   deriving Repr, DecidableEq
 
 -- Protocol Interface
@@ -75,7 +77,7 @@ inductive ProtocolAdapterType
   | Native
   | Bridge
   | Wrapper
-  | Custom of String
+  | Custom (of : String)
   deriving Repr, DecidableEq
 
 -- Protocol Adapter
@@ -455,6 +457,54 @@ def defaultProtocolRegistry : ProtocolRegistry :=
             }
         , enabled := true
         }
+      , -- LeanCtx (task-runner plugin: context compression + shell gating)
+        { protocol_name := .LeanCtx
+        , interface :=
+            { protocol_name := .LeanCtx
+            , version := "3.10.1"
+            , description := "lean-ctx MCP plugin; gates shell via persistent allowlist, so tasks negotiate allowlist entries, config, and data dirs up-front"
+            , capabilities :=
+                [ .ResourceAccess
+                , .Custom "context_compression"
+                , .Custom "shell_gating"
+                ]
+            }
+        , adapter :=
+            { interface :=
+                { protocol_name := .LeanCtx
+                , version := "3.10.1"
+                , description := "LeanCtx"
+                , capabilities := []
+                }
+            , adapter_type := .Bridge
+            , config := "{}"
+            }
+        , enabled := true
+        }
+      , -- AgentTelemetry (task-runner plugin: six llm-agents observation tools)
+        { protocol_name := .AgentTelemetry
+        , interface :=
+            { protocol_name := .AgentTelemetry
+            , version := "0.0.1"
+            , description := "agentsview, ccusage, cpa-usage-keeper, entire, mindwalk, tokscale — declared in Plugins/AgentTelemetry.lean with per-tool prerequisites"
+            , capabilities :=
+                [ .ResourceAccess
+                , .Custom "session_capture"
+                , .Custom "token_usage_analytics"
+                ]
+            }
+        , adapter :=
+            { interface :=
+                { protocol_name := .AgentTelemetry
+                , version := "0.0.1"
+                , description := "AgentTelemetry"
+                , capabilities := []
+                }
+            , adapter_type := .Wrapper
+            , config := "{}"
+            }
+        , enabled := true
+        }
       ]
   , default_protocol := some .MCP
   }
@@ -651,17 +701,17 @@ def getProtocolRegistryStats
 -- ============================================
 
 -- Theorem: ProtocolName is decidable
-theorem protocol_name_decidable :   (p1 p2 : ProtocolName), Decidable (p1 = p2) := by
+theorem protocol_name_decidable : ∀ (p1 p2 : ProtocolName), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ProtocolCapability is decidable
-theorem protocol_capability_decidable :   (c1 c2 : ProtocolCapability), Decidable (c1 = c2) := by
+theorem protocol_capability_decidable : ∀ (c1 c2 : ProtocolCapability), Decidable (c1 = c2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ProtocolAdapterType is decidable
-theorem protocol_adapter_type_decidable :   (t1 t2 : ProtocolAdapterType), Decidable (t1 = t2) := by
+theorem protocol_adapter_type_decidable : ∀ (t1 t2 : ProtocolAdapterType), Decidable (t1 = t2) := by
   intro _ _
   infer_instance
 

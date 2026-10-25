@@ -54,7 +54,7 @@ inductive ConnectionType
 structure ConnectionConfig where
   connection_type : ConnectionType
   endpoint : Option String
-  headers : Option (List (String  String))
+  headers : Option (List (String × String))
   timeout : Option Nat
   
 -- MCP Client Config
@@ -261,7 +261,7 @@ structure Client where
 -- MCP Client State
 structure ClientState where
   client_id : String
-  connected_servers : List (ServerName  ServerState)
+  connected_servers : List (ServerName × ServerState)
   pending_requests : List PendingRequest
   
 -- Pending Request
@@ -346,13 +346,13 @@ def executeMCPResourceRead
 
 -- MCP Server Handler
 structure ServerHandler where
-  on_initialize : Option (ServerConfig  IO ServerInfo)
-  on_tool_call : Option (ToolCall  IO ToolCallResult)
-  on_read_resource : Option (Resource  IO ResourceReadResult)
+  on_initialize : Option (ServerConfig × IO ServerInfo)
+  on_tool_call : Option (ToolCall × IO ToolCallResult)
+  on_read_resource : Option (Resource × IO ResourceReadResult)
   on_list_resources : Option (IO ResourceListResult)
-  on_get_prompt : Option (PromptName  IO PromptGetResult)
+  on_get_prompt : Option (PromptName × IO PromptGetResult)
   on_list_prompts : Option (IO PromptListResult)
-  on_sample : Option (String  IO SampleResult)
+  on_sample : Option (String × IO SampleResult)
   
 -- MCP Sample Result
 structure SampleResult where
@@ -548,32 +548,32 @@ def createGitMCPServer : ServerConfig :=
 -- ============================================
 
 -- Theorem: ServerCapability is decidable
-theorem server_capability_decidable :   (c1 c2 : ServerCapability), Decidable (c1 = c2) := by
+theorem server_capability_decidable : ∀ (c1 c2 : ServerCapability), Decidable (c1 = c2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ConnectionType is decidable
-theorem connection_type_decidable :   (t1 t2 : ConnectionType), Decidable (t1 = t2) := by
+theorem connection_type_decidable : ∀ (t1 t2 : ConnectionType), Decidable (t1 = t2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ResourceType is decidable
-theorem resource_type_decidable :   (t1 t2 : ResourceType), Decidable (t1 = t2) := by
+theorem resource_type_decidable : ∀ (t1 t2 : ResourceType), Decidable (t1 = t2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ContentBlockType is decidable
-theorem content_block_type_decidable :   (t1 t2 : ContentBlockType), Decidable (t1 = t2) := by
+theorem content_block_type_decidable : ∀ (t1 t2 : ContentBlockType), Decidable (t1 = t2) := by
   intro _ _
   infer_instance
 
 -- Theorem: MessageType is decidable
-theorem message_type_decidable :   (t1 t2 : MessageType), Decidable (t1 = t2) := by
+theorem message_type_decidable : ∀ (t1 t2 : MessageType), Decidable (t1 = t2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ServerState is decidable
-theorem server_state_decidable :   (s1 s2 : ServerState), Decidable (s1 = s2) := by
+theorem server_state_decidable : ∀ (s1 s2 : ServerState), Decidable (s1 = s2) := by
   intro _ _
   infer_instance
 

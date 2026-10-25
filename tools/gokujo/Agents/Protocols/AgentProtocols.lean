@@ -204,7 +204,7 @@ def createProtocolFactory : ProtocolFactory :=
 -- ============================================
 
 -- All known agent protocols (1000+)
-def allAgentProtocols : List (String  ProtocolCategory  String) :=
+def allAgentProtocols : List (String × ProtocolCategory × String) :=
   [ -- Tool Calling Protocols (20+)
     ("OpenAI Function Calling", .ToolCalling, "OpenAI's function calling protocol")
   , ("Anthropic Tool Use", .ToolCalling, "Anthropic's tool use protocol")
@@ -652,62 +652,62 @@ def executeViaUniversalAdapter
 -- ============================================
 
 -- Theorem: ProtocolCategory is decidable
-theorem protocol_category_decidable :   (c1 c2 : ProtocolCategory), Decidable (c1 = c2) := by
+theorem protocol_category_decidable : ∀ (c1 c2 : ProtocolCategory), Decidable (c1 = c2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ToolCallingProtocol is decidable
-theorem tool_calling_protocol_decidable :   (p1 p2 : ToolCallingProtocol), Decidable (p1 = p2) := by
+theorem tool_calling_protocol_decidable : ∀ (p1 p2 : ToolCallingProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ReasoningProtocol is decidable
-theorem reasoning_protocol_decidable :   (p1 p2 : ReasoningProtocol), Decidable (p1 = p2) := by
+theorem reasoning_protocol_decidable : ∀ (p1 p2 : ReasoningProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: MultiAgentProtocol is decidable
-theorem multi_agent_protocol_decidable :   (p1 p2 : MultiAgentProtocol), Decidable (p1 = p2) := by
+theorem multi_agent_protocol_decidable : ∀ (p1 p2 : MultiAgentProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: MemoryProtocol is decidable
-theorem memory_protocol_decidable :   (p1 p2 : MemoryProtocol), Decidable (p1 = p2) := by
+theorem memory_protocol_decidable : ∀ (p1 p2 : MemoryProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: PlanningProtocol is decidable
-theorem planning_protocol_decidable :   (p1 p2 : PlanningProtocol), Decidable (p1 = p2) := by
+theorem planning_protocol_decidable : ∀ (p1 p2 : PlanningProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: ExecutionProtocol is decidable
-theorem execution_protocol_decidable :   (p1 p2 : ExecutionProtocol), Decidable (p1 = p2) := by
+theorem execution_protocol_decidable : ∀ (p1 p2 : ExecutionProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: CommunicationProtocol is decidable
-theorem communication_protocol_decidable :   (p1 p2 : CommunicationProtocol), Decidable (p1 = p2) := by
+theorem communication_protocol_decidable : ∀ (p1 p2 : CommunicationProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: LearningProtocol is decidable
-theorem learning_protocol_decidable :   (p1 p2 : LearningProtocol), Decidable (p1 = p2) := by
+theorem learning_protocol_decidable : ∀ (p1 p2 : LearningProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: EvaluationProtocol is decidable
-theorem evaluation_protocol_decidable :   (p1 p2 : EvaluationProtocol), Decidable (p1 = p2) := by
+theorem evaluation_protocol_decidable : ∀ (p1 p2 : EvaluationProtocol), Decidable (p1 = p2) := by
   intro _ _
   infer_instance
 
 -- Theorem: MaturityLevel is decidable
-theorem maturity_level_decidable :   (m1 m2 : MaturityLevel), Decidable (m1 = m2) := by
+theorem maturity_level_decidable : ∀ (m1 m2 : MaturityLevel), Decidable (m1 = m2) := by
   intro _ _
   infer_instance
 
 -- Theorem: CompatibilityLevel is decidable
-theorem compatibility_level_decidable :   (c1 c2 : CompatibilityLevel), Decidable (c1 = c2) := by
+theorem compatibility_level_decidable : ∀ (c1 c2 : CompatibilityLevel), Decidable (c1 = c2) := by
   intro _ _
   infer_instance
 
@@ -719,12 +719,12 @@ theorem all_agent_protocols_has_protocols :
 
 -- Theorem: MaturityLevel has order
 theorem maturity_level_has_order :
-  .Experimental < .Alpha  .Alpha < .Beta  .Beta < .Stable  .Stable < .Production := by
+  .Experimental < .Alpha × .Alpha < .Beta × .Beta < .Stable × .Stable < .Production := by
   decide
 
 -- Theorem: CompatibilityLevel has order
 theorem compatibility_level_has_order :
-  .Incompatible < .Partial  .Partial < .MostlyCompatible  .MostlyCompatible < .FullyCompatible  .FullyCompatible < .Native := by
+  .Incompatible < .Partial × .Partial < .MostlyCompatible × .MostlyCompatible < .FullyCompatible × .FullyCompatible < .Native := by
   decide
 
 end Agents
