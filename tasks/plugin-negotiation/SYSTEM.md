@@ -55,6 +55,24 @@ LEAN_PATH=/tmp/plugincheck lean Plugins/LeanCtx.lean
 LEAN_PATH=/tmp/plugincheck lean Plugins/AgentTelemetry.lean
 ```
 
+## Worked Demo (verified by `decide` in LeanCtx.lean)
+
+```
+hostOct24 (lean/lake allowlisted, six tools absent)
+  unmet(prerequisites) = [agentsview, ccusage, cpa-usage-keeper,
+                          entire, mindwalk, tokscale]
+  negotiate            ≠ granted          -- demo_blocked_exactly_the_six
+                                          -- demo_blocked_before_repair
+
+lean-ctx allow ×6      (2026-10-25, additive; config now 272 commands)
+
+hostAfterRepair
+  negotiate            = granted          -- demo_granted_after_repair
+```
+
+The outage was fully predictable before dispatch: the blocked list was
+computable as data the moment the task was declared.
+
 ## Acceptance Criteria
 - [x] All three Plugins files type-check standalone (Lean 4.30).
 - [x] Negotiation model covers: executables, allowlist entries, config

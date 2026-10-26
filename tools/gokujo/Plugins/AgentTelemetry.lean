@@ -112,11 +112,11 @@ def mindwalk : Plugin :=
       ] }
 
 -- tokscale (junhoyeo) — token usage analytics CLI/TUI
--- Probed 2026-10-25: `clients` reports per-client roots — opencode 15.7K
--- msgs (~/.local/share/opencode/storage/message), gemini 34.9K
--- (~/.gemini/tmp), codex 8.2K (~/.codex/sessions, 29/74 rollouts lack usage
--- records), droid (~/.factory/sessions), cursor/amp via cache dirs. First
--- full scan took >10 min; aggregates incl. mistral-vibe at $794.17.
+-- Probed 2026-10-25: `clients` reports per-client roots — pi 131.7K msgs
+-- (~/.pi/agent/sessions), kilo 73.3K (~/.local/share/kilo/kilo.db), hermes
+-- 23.9K, gemini 34.9K, opencode 15.7K, codex 8.2K (29/74 rollouts lack usage
+-- records), droid, claude; no qoder client. First full scan took >10 min;
+-- aggregates incl. mistral-vibe at $794.17.
 def tokscale : Plugin :=
   { id := .Custom "tokscale"
   , version := "4.20.1"
@@ -128,7 +128,7 @@ def tokscale : Plugin :=
       , { name := "~/.config/tokscale", kind := .WritableDirectory
         , description := "probed: settings, headless roots, cursor/amp caches" }
       , { name := "agent transcript roots", kind := .Custom "read set"
-        , description := "probed via `clients`: opencode/gemini/codex/droid/claude trees; no pi/kilo/qoder client" }
+        , description := "probed via `clients`: pi/kilo/hermes/opencode/gemini/codex/droid/claude trees; no qoder client" }
       ] }
 
 -- ============================================

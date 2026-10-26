@@ -109,5 +109,42 @@ theorem llm_agents_request_supported_needs_all
   prerequisites_supported host llmAgentsToolsRequest.prerequisites :=
   negotiate_granted_implies_supported host llmAgentsToolsRequest h
 
+-- ============================================
+-- Worked demo (2026-10-24 outage → 2026-10-25 repair)
+-- ============================================
+
+-- The host as probed on 2026-10-24: lean/lake already allowlisted, the six
+-- llm-agents tools not.
+def hostOct24 : Host :=
+  { emptyHost with
+    allowlisted_cmds := ["lean", "lake"]
+  , executables_on_path := ["lean", "lake"]
+  }
+
+-- After `lean-ctx allow` ×6 (2026-10-25), from the live config dump.
+def hostAfterRepair : Host :=
+  { emptyHost with
+    allowlisted_cmds :=
+      ["agentsview", "ccusage", "cpa-usage-keeper", "entire", "mindwalk",
+       "tokscale", "lean", "lake"]
+  , executables_on_path :=
+      ["agentsview", "ccusage", "entire", "mindwalk", "lean", "lake"]
+  }
+
+-- Blocked on 2026-10-24, on exactly the six missing binaries — the outage
+-- was predictable, the missing set is computable before dispatch:
+theorem demo_blocked_exactly_the_six :
+    List.map (fun p => p.name)
+      (unmet hostOct24 llmAgentsToolsRequest.prerequisites) =
+      ["agentsview", "ccusage", "cpa-usage-keeper", "entire", "mindwalk",
+       "tokscale"] := by decide
+
+theorem demo_blocked_before_repair :
+    negotiate hostOct24 llmAgentsToolsRequest ≠ .granted := by decide
+
+-- Granted after the repair: `lean-ctx allow` ×6 flipped negotiation.
+theorem demo_granted_after_repair :
+    negotiate hostAfterRepair llmAgentsToolsRequest = .granted := by decide
+
 end LeanCtx
 end Plugins
