@@ -48,3 +48,8 @@ explore/*/.git.bak
 .minimal-*/
 lake-packages/
 .build/
+
+# Worktree copies — never track; see tracker/AGENTS.md
+/worktrees/
+/explore/
+/.letta/
