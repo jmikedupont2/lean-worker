@@ -1,5 +1,7 @@
 # Task: Full Project Testing with Fixed Binary
 
+- **Tags:** test
+
 **Status:** done (2026-10-18) — full-dir check now unqualified PASS (see 2026-10-18 full-dir section)
 **Project:** lean-worker
 **Priority:** P2

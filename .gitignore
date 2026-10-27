@@ -53,3 +53,8 @@ lake-packages/
 /worktrees/
 /explore/
 /.letta/
+
+# Compiled knife binaries — never track; build via lake (minimal/GOKUJO.md)
+minimal/gokujo
+minimal/gokujo-fixed
+minimal/test

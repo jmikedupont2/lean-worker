@@ -1,5 +1,7 @@
 # Task: Rebuild Fixed Native Binary
 
+- **Tags:** rebuild-fixed-binary
+
 **Status:** done (2026-10-18)
 **Project:** lean-worker
 **Priority:** P1

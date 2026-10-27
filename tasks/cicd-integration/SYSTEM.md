@@ -1,5 +1,7 @@
 # Task: CI/CD Integration
 
+- **Tags:** cicd-integration
+
 **Status:** pending
 **Project:** lean-worker
 **Priority:** P2

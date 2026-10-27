@@ -1,5 +1,7 @@
 # Task: Documentation Updates
 
+- **Tags:** docs
+
 **Status:** pending
 **Project:** lean-worker
 **Priority:** P2
