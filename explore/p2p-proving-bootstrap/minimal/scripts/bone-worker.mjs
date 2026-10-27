@@ -9,7 +9,9 @@
 //      are configured.
 //   3. Work = the knife, in order:
 //        a. gokujo check <file>   — scan+graph+build+sorry+axioms as one gate
-//        b. record outcome in results.jsonl: proved | failed | check-failed
+//        b. job-verifier CHECK gate — acceptance re-decided from the
+//           elaborated environment (PR #25 remediation, TEST_ONLY)
+//        c. record outcome in results.jsonl: proved | failed | check-failed
 //   4. Sleep, repeat. SIGTERM/SIGINT set a flag; the worker exits cleanly
 //      between jobs (systemd restarts are safe — state.json is the ledger).
 //
@@ -37,6 +39,8 @@ import { join, dirname } from 'node:path';
 import { hostname } from 'node:os';
 
 const GOKUJO = process.env.GOKUJO || join(import.meta.dirname, '..', 'gokujo');
+const JOB_VERIFIER = process.env.JOB_VERIFIER ||
+  join(import.meta.dirname, '..', '..', '..', '..', 'minimal', 'scripts', 'job-verifier.sh');
 const BONES_ROOT = process.env.BONES_ROOT || '/mnt/data1/aristotle-merge/bones';
 const STATE_DIR = process.env.STATE_DIR || '/var/lib/bone-worker';
 const POLL_SECONDS = Number(process.env.POLL_SECONDS || 30);
@@ -112,6 +116,29 @@ function runKnife(path, cwd) {
   return { code: r.status ?? -1, out: (r.stdout || '') + (r.stderr || '') };
 }
 
+function runJobVerifier(offer, path) {
+  // Post-gokujo CHECK gate (PR #25 remediation, TEST_ONLY): gokujo's exit 0
+  // is scanner/lexer-based — the RT-9 audit class showed a poisoned matrix
+  // can satisfy the scanner while the elaborated environment says otherwise.
+  // The job-verifier re-decides acceptance from the elaborated environment:
+  // the goal decl exists in the submission module, is a theorem, has no
+  // sorryAx, only allowed axioms, and declares no axioms of its own.  Full
+  // mode (statement match against a reference) when the offer carries
+  // refGoal coordinates; refless mode otherwise.  Exit 0 accept / 1 reject
+  // / 2 checker infra error.
+  const module = offer.job?.proveGoal?.[0];
+  const decl = offer.job?.proveGoal?.[1];
+  if (!module || !decl) {
+    return { code: 2, out: 'offer has no proveGoal coordinates to verify' };
+  }
+  const ref = offer.job?.refGoal?.[0];
+  const expected = offer.job?.refGoal?.[1];
+  const args = ref && expected ? [path, module, decl, ref, expected] : [path, module, decl];
+  const r = spawnSync('bash', [JOB_VERIFIER, ...args],
+    { encoding: 'utf8', timeout: JOB_TIMEOUT_MS });
+  return { code: r.status ?? -1, out: (r.stdout || '') + (r.stderr || '') };
+}
+
 function verifyOutcome(offer, out) {
   // Receipt includes the source digest and the goal coordinates as supplied
   // when the offer was emitted.  A worker that only watches `gokujo check`
@@ -135,7 +162,7 @@ function verifyOutcome(offer, out) {
   return { provenance, proof };
 }
 
-function writeOutcome(offer, proof, outcome) {
+function writeOutcome(offer, proof, outcome, state) {
   const rec = { ...offer, ...proof, ...outcome, finishedAt: ts() };
   appendFileSync(RESULTS, JSON.stringify(rec) + '\n');
   state.claims[offer.jobId].outcome = outcome.status;
@@ -154,7 +181,7 @@ function work(offer, state) {
   let outcome;
   if (!path || !existsSync(path)) {
     outcome = { status: 'failed', reason: 'source file missing' };
-    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome);
+    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome, state);
     return;
   }
 
@@ -177,17 +204,35 @@ function work(offer, state) {
     process.exit(2);
   }
   if (code === 0) {
+    // gokujo's exit 0 is scanner-based; acceptance is re-decided from the
+    // elaborated environment before the job can be marked proved (RT-9).
+    const v = runJobVerifier(offer, path);
+    if (v.code === 2) {
+      // Checker infra failure, not a verdict on the proof: record nothing,
+      // the claim stays outcome-less and is retried (same policy as
+      // toolchain loss above).
+      console.log(`${ts()} CHECK-FAILED ${jobId} — job-verifier: ${v.out.split('\n').slice(-3).join(' | ')}`);
+      return;
+    }
+    if (v.code !== 0) {
+      const reason = (v.out.match(/"reasonCode":"([A-Z_]+)"/) || [])[1] || 'verifier rejected';
+      outcome = { status: 'failed', reason: `job-verifier: ${reason}`, verifier: v.out.trim() };
+      writeOutcome(offer, { module: offer.job?.proveGoal?.[0] ?? null,
+        decl: offer.job?.proveGoal?.[1] ?? null, digestNat: offer.job?.proveGoal?.[2] ?? null }, outcome, state);
+      return;
+    }
     const { provenance, proof } = verifyOutcome(offer, out);
-    outcome = { status: 'proved', note: 'gokujo check exit 0', provenance, proof };
-    console.log(`${ts()} proved ${jobId} proveGoal=[${provenance.module}, ${provenance.decl}, ${provenance.digestNat}] sourceDigest=${provenance.sourceDigestHex}`);
+    outcome = { status: 'proved', note: 'gokujo check exit 0 + job-verifier OK', verifier: v.out.trim(), provenance, proof };
+    console.log(`${ts()} proved ${jobId} proveGoal=[${provenance.module}, ${provenance.decl}, ${provenance.digestNat}] sourceDigest=${provenance.sourceDigestHex} verifier=${v.out.trim()}`);
+    writeOutcome(offer, proof, outcome, state);
   } else if (code === 124) {
     // SCP: the knife blew the time budget — this source is contraband,
     // quarantined to phase 2, not a phase-1 failure.
     outcome = { status: 'quarantined', reason: `budget exceeded (${JOB_TIMEOUT_MS / 1000}s)` };
-    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome);
+    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome, state);
   } else {
     outcome = { status: 'failed', reason: `gokujo check exit ${code}`, tail: out.split('\n').slice(-12).join('\n') };
-    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome);
+    writeOutcome(offer, { module: null, decl: null, digestNat: null }, outcome, state);
   }
 }
 
