@@ -69,12 +69,12 @@ This document summarizes all the changes made across multiple worktrees in the l
 - `.letta/worktrees/microgokujo-interfaces-fd857d3c` - gitdir pointer broken
 
 ## Main Repository State
-- **Current branch**: integration/vaciu-merge
+- **Current branch**: otc-desk-relay-mailbox
 - **Untracked file**: explore/gokujo-updates/flake-gokujo.nix
 - **Recent commits**:
-  - 0f1fa30: docs(tasks): record integration/vaciu-merge branch and merged status
-  - ee86fa3: chore(merge): integrate Vaciu PRs + Aleph Cloud removal into integration/vaciu-merge
-  - c1dc851: docs(tasks): refresh task tracker with P2 status and verified findings
+  - f0536f6: feat(aristo-integration): integrate aristo project 14fa8b17 into lean-worker
+  - 193ca4d: merge: resolve flake.nix conflict — remove broken mathlib4 input, use pkgs.lean4 toolchain
+  - b7deb3d: feat: add P2P CF fleet sync task and update formal plan task files
   - 434c4da: fix: rebuild gokujo binary with fixed recursive->iterative scanStr/walkLean
 
 ## Build Status

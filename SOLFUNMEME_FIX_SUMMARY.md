@@ -42,20 +42,22 @@ cd /mnt/data1/aristotle-results/7529b394-0a43-4120-8b55-39a013b15129/output-fina
 4. **Documentation**: Updated README, GOKUJO.md, Makefile, regendocs.sh to use `./gokujo` pattern
 5. **Build Infrastructure**: Fixed flake.nix, rebuilt binaries, updated task list
 
-## Current State ❌
+## Current State ✅ (resolved 2026-10-20)
 
-1. **Native Binary**: `./gokujo` still has old recursive `scanStr`
-2. **Missing**: Fixed `Gokujo.lean` in Solfunmeme project directory
-3. **Missing**: Rebuilt native binary using fixed code
-4. **Not Working**: `./gokujo scan RequestProject` still causes stack overflow
+The recursive→iterative `scanStr`/`walkLean` fix is committed as `434c4da`
+("fix: rebuild gokujo binary with fixed recursive->iterative scanStr/walkLean").
+The rebuilt native binary is checked in at `minimal/gokujo` (built 2026-10-20),
+so the stack-overflow on large projects (e.g. Solfunmeme, 663 files) is fixed.
 
-## Next Steps
+The steps below are retained as the original fix procedure; they are **done**.
 
-1. **Copy fixed source files** to Solfunmeme project
-2. **Rebuild native binary** using fixed `Gokujo.lean`
-3. **Test Solfunmeme operations** with the new binary
-4. **Verify stack overflow fix** with full directory scans
-5. **Update task list** with final status
+## Original Next Steps (completed)
+
+1. ✅ **Copy fixed source files** to Solfunmeme project
+2. ✅ **Rebuild native binary** using fixed `Gokujo.lean` (→ `434c4da`)
+3. ✅ **Test Solfunmeme operations** with the new binary
+4. ✅ **Verify stack overflow fix** with full directory scans
+5. ✅ **Update task list** with final status
 
 ## Commands to Execute
 
@@ -85,4 +87,4 @@ cd /mnt/data1/aristotle-results/7529b394-0a43-4120-8b55-39a013b15129/output-fina
 
 ---
 *Generated: 2026-09-22*
-*Status: Ready for final implementation*
+*Status: Resolved — fix committed as `434c4da`, binary rebuilt 2026-10-20*
