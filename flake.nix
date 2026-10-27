@@ -19,13 +19,22 @@
     # check anyway: both stages are no-mathlib by policy (see
     # minimal/fast-lakefile.toml: "NO [[require]] = no mathlib, no network").
     pipelight.url = "github:pipelight/pipelight";
+    # Session/usage tooling from llm-agents.nix (agentsview, ccusage,
+    # cpa-usage-keeper, entire, mindwalk, tokscale). nixpkgs is deliberately
+    # NOT followed: llm-agents.nix pins its own nixpkgs-unstable and publishes
+    # daily builds to https://cache.numtide.com — following ours would rebuild
+    # the Go/npm tooling from source and miss that cache (same note as
+    # ~/projects/system-manager/flake.nix).
+    llm-agents-src.url = "github:numtide/llm-agents.nix";
     # gokujo is built locally from fixed source (iterative scanStr/walkLean) —
     # no github:mfng/gokujo input (that placeholder 404s).
   };
 
-  outputs = { self, nixpkgs, flake-utils, pipelight }:
+  outputs = { self, nixpkgs, flake-utils, pipelight, llm-agents-src }:
     flake-utils.lib.eachDefaultSystem (system: let
       pkgs = nixpkgs.legacyPackages.${system};
+      # agent session analytics / token-usage CLIs (see input note above)
+      llmAgents = llm-agents-src.packages.${system};
       # Inside nix the toolchain is whatever nixpkgs carries (4.34.1 at the
       # nixpkgs-unstable revision locked in flake.lock); elan users get the
       # minimal/lean-toolchain pin (v4.28.0). Both compile the checked trees.
@@ -79,7 +88,12 @@
     in {
       devShells.default = pkgs.mkShell {
         name = "lean-worker";
-        buildInputs = [ pkgs.lean4 pkgs.git pkgs.jq pkgs.curl pkgs.nix ];
+        buildInputs = [
+          pkgs.lean4 pkgs.git pkgs.jq pkgs.curl pkgs.nix
+          # agent session viewers + usage analytics (llm-agents.nix)
+          llmAgents.agentsview llmAgents.ccusage llmAgents.cpa-usage-keeper
+          llmAgents.entire llmAgents.mindwalk llmAgents.tokscale
+        ];
         LEAN_PATH = rp_share;
         shellHook = ''
           echo "lean-worker dev shell ready"
