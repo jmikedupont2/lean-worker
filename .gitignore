@@ -22,7 +22,6 @@ __pycache__
 # LaTeX build
 *.aux
 *.log
-*.out
 *.toc
 *.lof
 *.lot
@@ -33,6 +32,12 @@ __pycache__
 
 # Gokujo build artifacts
 minimal/.gokujo/build/
+
+# Merge-tool artifacts (BASE/LOCAL/REMOTE/BACKUP sidecars)
+*_BASE_*
+*_LOCAL_*
+*_REMOTE_*
+*_BACKUP_*
 
 # Temporary files
 .tmp
