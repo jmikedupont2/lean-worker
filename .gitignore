@@ -63,3 +63,5 @@ lake-packages/
 minimal/gokujo
 minimal/gokujo-fixed
 minimal/test
+/gokujo-report.json
+minimal/lakefile.ci-bak
