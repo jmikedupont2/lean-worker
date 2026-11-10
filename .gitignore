@@ -53,3 +53,6 @@ explore/*/.git.bak
 .minimal-*/
 lake-packages/
 .build/
+
+# Lake build artifacts
+.lake/
