@@ -1,18 +1,22 @@
 # JobVerifier regression tests
 
-Requires Lean 4.35.0 and Python 3.
+Requirements:
+- Lean 4.28.0 or Lean 4.35.0
+- Python 3
 
-Run:
+Run from this directory:
 
     python3 run_regressions.py
 
-The runner compiles all nine Lean fixture modules from
-source and executes nine verifier checks.
+The runner compiles the checker and rebuilds nine fixture
+modules from Lean sources. It then executes ten checks,
+including a missing-module import failure.
 
 The checker under test is ../Check.lean.
 
-Security limits:
+Security limitations:
 - TEST_ONLY
-- No sandboxing or production worker integration
-- No real P2P network verification
-- Caller must authorize the reference module
+- No sandbox
+- No production worker integration
+- No live P2P verification
+- Reference module authorization belongs to the caller

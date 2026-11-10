@@ -44,7 +44,7 @@ rc, version, err = execute(
 )
 print(version.strip(), flush=True)
 
-if rc != 0 or "4.35.0" not in version:
+if rc != 0 or not any(f"version {v}," in version for v in ("4.28.0", "4.35.0")):
     sys.exit("C32_LEAN_VERSION_MISMATCH")
 
 print("=== COMPILE VERIFIER ===", flush=True)
@@ -100,9 +100,11 @@ cases = [
      1, "TARGET_MISSING"),
     ("REFERENCE_SPOOF", "Mismatch", "target",
      1, "REFERENCE_NOT_IN_MODULE"),
+    ("IMPORT_FAILURE", "NonexistentC41Module", "expected",
+     1, "IMPORT_FAILED"),
 ]
 
-print("=== EXECUTE NINE REGRESSIONS ===", flush=True)
+print("=== EXECUTE TEN REGRESSIONS ===", flush=True)
 
 results = []
 
@@ -172,7 +174,7 @@ passed = sum(r["passed"] for r in results)
 
 report = {
     "stage": "ZOS-INT-01-C32",
-    "lean_version": "4.35.0",
+    "lean_version": version.strip(),
     "all_fixtures_rebuilt_from_source": True,
     "total": len(results),
     "passed": passed,

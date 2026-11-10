@@ -69,15 +69,19 @@ def declaredAxioms (env : Environment) (mod : Name) : List Name := Id.run do
 /-- The full decision procedure. Exit 0 accepted / 1 rejected / 2 checker error. -/
 def run (cfg : Cfg) : IO UInt32 := do
   initSearchPath (← findSysroot)
-  let env ←
+  let envOpt ←
     try
-      importModules
-        #[{ module := cfg.refModule },
-          { module := cfg.module }]
-        (opts := {}) (trustLevel := 0)
-    catch e =>
-      verdict .importFailed cfg (extra := s!",\"detail\":\"{e}\"")
-      return 1
+      let imported ←
+        importModules
+          #[{ module := cfg.refModule },
+            { module := cfg.module }]
+          (opts := {}) (trustLevel := 0)
+      pure (some imported : Option Environment)
+    catch _ =>
+      verdict .importFailed cfg
+      pure (none : Option Environment)
+  let some env := envOpt
+    | return 1
   let some expectedInfo := env.find? cfg.expectedName
     | do
         verdict .checkerError cfg (extra := ",\"detail\":\"reference __expected missing\"")
