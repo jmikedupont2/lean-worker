@@ -22,7 +22,7 @@ open Lean
 inductive Reason where
   | ok | targetMissing | targetNotTheorem | statementMismatch
   | sorryAxiom | axiomNotAllowed | axiomDeclared
-  | importFailed | checkerError
+  | importFailed | checkerError | referenceNotInModule
   deriving Inhabited, Repr
 
 def Reason.code : Reason → String
@@ -35,6 +35,7 @@ def Reason.code : Reason → String
   | .axiomDeclared => "AXIOM_DECLARED"
   | .importFailed => "IMPORT_FAILED"
   | .checkerError => "CHECKER_ERROR"
+  | .referenceNotInModule => "REFERENCE_NOT_IN_MODULE"
 
 structure Cfg where
   module : Name
@@ -75,6 +76,14 @@ def run (cfg : Cfg) : IO UInt32 := do
     | do
         verdict .checkerError cfg (extra := ",\"detail\":\"reference __expected missing\"")
         return 2
+  -- Validate reference declaration ownership.
+  let some refIdx := env.getModuleIdx? cfg.refModule
+    | do
+        verdict .referenceNotInModule cfg
+        return 1
+  if env.getModuleIdxFor? cfg.expectedName != some refIdx then
+    verdict .referenceNotInModule cfg
+    return 1
   let some c := env.find? cfg.decl
     | do verdict .targetMissing cfg; return 1
   let .thmInfo thm := c
