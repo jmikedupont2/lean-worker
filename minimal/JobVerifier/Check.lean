@@ -22,7 +22,7 @@ open Lean
 inductive Reason where
   | ok | targetMissing | targetNotTheorem | statementMismatch
   | sorryAxiom | axiomNotAllowed | axiomDeclared
-  | importFailed | checkerError
+  | importFailed | checkerError | referenceNotInModule
   deriving Inhabited, Repr
 
 def Reason.code : Reason → String
@@ -35,6 +35,7 @@ def Reason.code : Reason → String
   | .axiomDeclared => "AXIOM_DECLARED"
   | .importFailed => "IMPORT_FAILED"
   | .checkerError => "CHECKER_ERROR"
+  | .referenceNotInModule => "REFERENCE_NOT_IN_MODULE"
 
 structure Cfg where
   module : Name
@@ -45,14 +46,20 @@ structure Cfg where
 
 def verdict (r : Reason) (cfg : Cfg) (axioms : List Name := [])
     (declared : List Name := []) (extra : String := "") : IO Unit := do
-  let q (n : Name) := s!"\"{n}\""
-  let axStr := String.intercalate ", " (axioms.map q)
-  let dclStr := String.intercalate ", " (declared.map q)
-  IO.println s!"{\"schema\":\"zos.verify.v1-testonly\",\"jobModule\":\"{cfg.module}\",\"decl\":\"{cfg.decl}\",\"reasonCode\":\"{r.code}\",\"axioms\":[{axStr}],\"declaredAxiomsInSubmission\":[{dclStr}]{extra}}"
+  let _ := extra
+  let result := Json.mkObj
+    [ ("schema", toJson ("zos.verify.v1-testonly" : String))
+    , ("jobModule", toJson (toString cfg.module))
+    , ("decl", toJson (toString cfg.decl))
+    , ("reasonCode", toJson r.code)
+    , ("axioms", toJson (axioms.map toString))
+    , ("declaredAxiomsInSubmission", toJson (declared.map toString))
+    ]
+  IO.println result.compress
 
 /-- All constants defined in `mod` whose ConstantInfo is an axiomInfo. -/
 def declaredAxioms (env : Environment) (mod : Name) : List Name := Id.run do
-  let some idx := env.getModuleIdxFor? mod | []
+  let some idx := env.getModuleIdx? mod | []
   let some md := env.header.moduleData[idx]? | []
   md.constNames.foldl (init := []) fun acc n =>
     match env.find? n with
@@ -61,34 +68,49 @@ def declaredAxioms (env : Environment) (mod : Name) : List Name := Id.run do
 
 /-- The full decision procedure. Exit 0 accepted / 1 rejected / 2 checker error. -/
 def run (cfg : Cfg) : IO UInt32 := do
-  initSearchPath
-  let env ←
+  initSearchPath (← findSysroot)
+  let envOpt ←
     try
-      importModules
-        #[{ module := cfg.refModule, runtimeOnly := false },
-          { module := cfg.module, runtimeOnly := false }]
-        (opts := {}) (trustLevel := 0)
-    catch e =>
-      verdict .importFailed cfg (extra := s!",\"detail\":\"{e}\"")
-      return 1
+      let imported ←
+        importModules
+          #[{ module := cfg.refModule },
+            { module := cfg.module }]
+          (opts := {}) (trustLevel := 0)
+      pure (some imported : Option Environment)
+    catch _ =>
+      verdict .importFailed cfg
+      pure (none : Option Environment)
+  let some env := envOpt
+    | return 1
   let some expectedInfo := env.find? cfg.expectedName
     | do
         verdict .checkerError cfg (extra := ",\"detail\":\"reference __expected missing\"")
         return 2
+  -- Validate reference declaration ownership.
+  let some refIdx := env.getModuleIdx? cfg.refModule
+    | do
+        verdict .referenceNotInModule cfg
+        return 1
+  if env.getModuleIdxFor? cfg.expectedName != some refIdx then
+    verdict .referenceNotInModule cfg
+    return 1
   let some c := env.find? cfg.decl
     | do verdict .targetMissing cfg; return 1
   let .thmInfo thm := c
     | do verdict .targetNotTheorem cfg; return 1
   -- The declaration must be defined in the submission module, not imported.
-  if env.getModuleFor? cfg.decl != some cfg.module then
+  if env.getModuleIdxFor? cfg.decl != env.getModuleIdx? cfg.module then
     verdict .targetMissing cfg (extra := ",\"detail\":\"decl not defined in submission module\"")
     return 1
   -- Level parameters and type must match the reference structurally.
   if c.levelParams != expectedInfo.levelParams || thm.type != expectedInfo.type then
     verdict .statementMismatch cfg; return 1
   -- Axioms from the environment (no lexer involved).
-  let (axioms, _) ← (Lean.collectAxioms cfg.decl).toIO
-    { fileName := "<jobverifier>", fileMap := default } { env := env }
+  let axs ←
+    (collectAxioms cfg.decl : CoreM (Array Name)).toIO'
+      { fileName := "<jobverifier>", fileMap := default }
+      { env := env }
+  let axioms := axs.toList
   if axioms.contains `sorryAx then
     verdict .sorryAxiom cfg (axioms := axioms); return 1
   let bad := axioms.filter (· ∉ cfg.allowedAxioms)
