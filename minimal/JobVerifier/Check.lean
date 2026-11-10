@@ -52,7 +52,7 @@ def verdict (r : Reason) (cfg : Cfg) (axioms : List Name := [])
 
 /-- All constants defined in `mod` whose ConstantInfo is an axiomInfo. -/
 def declaredAxioms (env : Environment) (mod : Name) : List Name := Id.run do
-  let some idx := env.getModuleIdxFor? mod | []
+  let some idx := env.getModuleIdx? mod | []
   let some md := env.header.moduleData[idx]? | []
   md.constNames.foldl (init := []) fun acc n =>
     match env.find? n with
